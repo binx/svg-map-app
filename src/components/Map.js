@@ -40,6 +40,10 @@ class Map extends Component {
       return d;
     })
 
+    // add event listeners here
+    const svg = d3.select(this.refs.svg);
+    svg.call();
+
     Promise.all(mapTiles).then(ti => {
       const mapTiles = ti.map(t => {
         const mapTile = this.zenArray(t).map(d => ({
@@ -92,7 +96,11 @@ class Map extends Component {
   render() {
     const { tiles = [], outline } = this.state;
     return (
-      <svg width="600" height="600" style={{ margin: "20px" }}>
+      <svg
+        width="600" height="600" 
+        ref="svg"
+        style={{ margin: "20px" }}
+      >
         {tiles.map((g,i) => (
           <g key={`group${i}`} className="tile">
             { g.map((path,j) => (
