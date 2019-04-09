@@ -35,23 +35,59 @@ class Map extends Component {
       .scale(projscale * (2 * Math.PI))
       .translate(projection([0, 0]))
 
+    // const getZoom = 1 << (8*d3tile()[0].z)
+
     const mapTiles = d3tile().map(async d => {
       d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
       return d;
     })
 
+    const zoomies = function(){
+      projection
+        .scale(d3.event.transform.k / (2*Math.PI))
+        .translate([d3.event.transform.x, d3.event.transform.y]);
+
+      d3.select("#site")
+      .attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y}) scale(${d3.event.transform.k})`)
+      .style("stroke-width", 1 / (d3.event.transform.k))
+
+    d3.selectAll('.tile').attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y})`)
+    }
+
+    const drawTiles = function(){
+
+      const zoomTile = tile()
+        .size([width,height])
+        .scale(d3.event.transform.k)
+        .translate(projection([0,0]))
+
+        //coming back to this after I wrap my head around the virtual DOM
+
+    }
+
+    const zoom = d3.zoom()
+      //.scaleExtent([1 << 8, 1 << 21])
+      .on("zoom", zoomies)
+      .on("end", drawTiles)
+
     // add event listeners here
     const svg = d3.select(this.refs.svg);
-    svg.call();
+    svg.call(zoom);
+    //svg.call(zoom.transform, d3.zoomIdentity.scale(getZoom))
+    //svg.call();
+
+    const tileIDs = d3tile().map(d => `tile-${d.x}-${d.y}-${d.z}`)
 
     Promise.all(mapTiles).then(ti => {
       const mapTiles = ti.map(t => {
-        const mapTile = this.zenArray(t).map(d => ({
+        const obj = {};
+        obj.coords= `tile-${t.x}-${t.y}-${t.z}`
+        obj.mapTile = this.zenArray(t).map(d => ({
           d: path(d),
-          class: this.getClass(d)
+          class: this.getClass(d),
         }))
-
-        return mapTile;
+        return obj;
+        //return mapTile;
       });
       this.setState({
         tiles: mapTiles,
@@ -94,24 +130,25 @@ class Map extends Component {
   }
 
   render() {
-    const { tiles = [], outline } = this.state;
+    const { tiles = [], outline} = this.state;
     return (
+      <div>
       <svg
         width="600" height="600" 
         ref="svg"
         style={{ margin: "20px" }}
       >
-        {tiles.map((g,i) => (
-          <g key={`group${i}`} className="tile">
-            { g.map((path,j) => (
-              <path key={`path${i}${j}`} className={path.class} d={path.d} />
-            ))}
+       {tiles.map((g,i) => (
+          <g key={`group${i}`} className="tile" id={g.coords}>
+         { g.mapTile.map((path,j) => (
+              <path key={`path${i}${j}`} className={path.class} d={path.d} id={path.coords}/>
+          ))}
           </g>
-        ))}
-        <path className="site" d={outline} />
+          ))}
+        <path className="site" d={outline} id="site" refs="outline"/>
       </svg>
-    );
-  }
+      </div>
+  );}
 }
 
 export default Map;
