@@ -29,55 +29,20 @@ class Map extends Component {
     const path = d3.geoPath().projection(projection);
 
     const outline = path(mapData);
+    const outlinepath = d3.select(this.refs.outline)
 
     const d3tile = tile()
       .size([width, height])
       .scale(projscale * (2 * Math.PI))
       .translate(projection([0, 0]))
 
-    // const getZoom = 1 << (8*d3tile()[0].z)
+
+    const getZoom = () => {return 1 << (7+(d3tile()[0].z))} //this is basically a hack for reconciling polygon scaling and tile scaling
 
     const mapTiles = d3tile().map(async d => {
       d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
       return d;
     })
-
-    const zoomies = function(){
-      projection
-        .scale(d3.event.transform.k / (2*Math.PI))
-        .translate([d3.event.transform.x, d3.event.transform.y]);
-
-      d3.select("#site")
-      .attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y}) scale(${d3.event.transform.k})`)
-      .style("stroke-width", 1 / (d3.event.transform.k))
-
-    d3.selectAll('.tile').attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y})`)
-    }
-
-    const drawTiles = function(){
-
-      const zoomTile = tile()
-        .size([width,height])
-        .scale(d3.event.transform.k)
-        .translate(projection([0,0]))
-
-        //coming back to this after I wrap my head around the virtual DOM
-
-    }
-
-    const zoom = d3.zoom()
-      //.scaleExtent([1 << 8, 1 << 21])
-      .on("zoom", zoomies)
-      .on("end", drawTiles)
-
-    // add event listeners here
-    const svg = d3.select(this.refs.svg);
-    svg.call(zoom);
-    //svg.call(zoom.transform, d3.zoomIdentity.scale(getZoom))
-    //svg.call();
-
-    const tileIDs = d3tile().map(d => `tile-${d.x}-${d.y}-${d.z}`)
-
     Promise.all(mapTiles).then(ti => {
       const mapTiles = ti.map(t => {
         const obj = {};
@@ -94,6 +59,61 @@ class Map extends Component {
         outline
       });
     })
+
+  const zoomies = function(){
+      projection
+        .scale(d3.event.transform.k / (2*Math.PI))
+        .translate([d3.event.transform.x, d3.event.transform.y]);
+
+      outlinepath
+      .attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y}) scale(${d3.event.transform.k/getZoom()})`)
+      .style("stroke-width", 1 / (d3.event.transform.k))
+
+    d3.selectAll('.tile').attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y})`)
+    }
+
+    const drawTiles = () => {
+      
+      const zoomTile = tile()
+        .size([width,height])
+        .scale(d3.event.transform.k)
+        .translate(projection([0,0]));
+
+
+      const zoomTiles = zoomTile().map(async d => {
+      d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
+      return d;
+    })
+
+      Promise.all(zoomTiles).then(ti => {
+      const zoomedTiles = ti.map(t => {
+        const obj = {};
+        obj.coords= `tile-${t.x}-${t.y}-${t.z}`
+        obj.mapTile = this.zenArray(t).map(d => ({
+          d: path(d),
+          class: this.getClass(d),
+        }))
+        return obj;
+        //return mapTile;
+      });
+      this.setState({
+        tiles: zoomedTiles
+      });
+    })
+  }
+
+    const zoom = d3.zoom()
+      //.scaleExtent([1 << 8, 1 << 21]) //this doesn't seem to actually matter
+      .on("zoom", zoomies)
+      .on("end", drawTiles)
+
+  
+    const svg = d3.select(this.refs.svg);
+    svg.call(zoom);
+    svg.call(zoom.transform, d3.zoomIdentity
+      .translate(width/2,height/2)
+      .scale(getZoom())) // this sets our zoom scale to be able to take in map tiles, but it also fucks up 
+   
   }
 
   getClass = d => {
@@ -145,7 +165,7 @@ class Map extends Component {
           ))}
           </g>
           ))}
-        <path className="site" d={outline} id="site" refs="outline"/>
+        <path className="site" d={outline} id="site" ref="outline"/>
       </svg>
       </div>
   );}
