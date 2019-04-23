@@ -15,7 +15,7 @@ class Map extends Component {
     const mapCentroid = centroid(mapData.geometry);
 
     const projection = d3.geoMercator()
-      .translate([width / 2, height / 2])
+      .translate([0,0])
       .center(mapCentroid.geometry.coordinates)
       .fitExtent(
         [
@@ -28,7 +28,8 @@ class Map extends Component {
     const projscale = projection.scale();
     const path = d3.geoPath().projection(projection);
 
-    const outline = path(mapData);
+
+    //console.log(outline)
     const outlinepath = d3.select(this.refs.outline)
 
     const d3tile = tile()
@@ -36,41 +37,49 @@ class Map extends Component {
       .scale(projscale * (2 * Math.PI))
       .translate(projection([0, 0]))
 
+    console.log(d3tile())
+    const getZoom = () => {return 1 << (8+(d3tile()[0].z))} //this is basically a hack for reconciling polygon scaling and tile scaling
 
-    const getZoom = () => {return 1 << (7+(d3tile()[0].z))} //this is basically a hack for reconciling polygon scaling and tile scaling
+    // const mapTiles = d3tile().map(async d => {
+    //   d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
+    //   return d;
+    // })
+    // Promise.all(mapTiles).then(ti => {
+    //   const mapTiles = ti.map(t => {
+    //     const obj = {};
+    //     obj.coords= `tile-${t.x}-${t.y}-${t.z}`
+    //     obj.mapTile = this.zenArray(t).map(d => ({
+    //       d: path(d),
+    //       class: this.getClass(d),
+    //     }))
+    //     return obj;
+    //     //return mapTile;
+    //   });
+    //   this.setState({
+    //     tiles: mapTiles,
+    //     outline
+    //   });
+    // })
 
-    const mapTiles = d3tile().map(async d => {
-      d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
-      return d;
-    })
-    Promise.all(mapTiles).then(ti => {
-      const mapTiles = ti.map(t => {
-        const obj = {};
-        obj.coords= `tile-${t.x}-${t.y}-${t.z}`
-        obj.mapTile = this.zenArray(t).map(d => ({
-          d: path(d),
-          class: this.getClass(d),
-        }))
-        return obj;
-        //return mapTile;
-      });
-      this.setState({
-        tiles: mapTiles,
-        outline
-      });
-    })
-
-  const zoomies = function(){
+  const zoomies = () => {
       projection
-        .scale(d3.event.transform.k / (2*Math.PI))
+        .scale(d3.event.transform.k /(2*Math.PI))
         .translate([d3.event.transform.x, d3.event.transform.y]);
 
-      outlinepath
-      .attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y}) scale(${d3.event.transform.k/getZoom()})`)
-      .style("stroke-width", 1 / (d3.event.transform.k))
-
-    d3.selectAll('.tile').attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y})`)
-    }
+      const outline = path(mapData);
+      
+      const setOutline = () => {
+        this.setState({outline: outline})
+        }
+        setOutline()  
+      
+  //     outlinepath
+  //     .attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y}) scale(${d3.event.transform.k/getZoom()})`)
+  //     // .style("stroke-width", 1 / (d3.event.transform.k/getZoom()))
+  
+  d3.selectAll('.tile').attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y} scale(${d3.event.transform.k/getZoom()})`)
+  
+  }
 
     const drawTiles = () => {
       
@@ -79,7 +88,7 @@ class Map extends Component {
         .scale(d3.event.transform.k)
         .translate(projection([0,0]));
 
-
+      console.log(zoomTile())
       const zoomTiles = zoomTile().map(async d => {
       d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
       return d;
@@ -94,27 +103,36 @@ class Map extends Component {
           class: this.getClass(d),
         }))
         return obj;
-        //return mapTile;
       });
       this.setState({
         tiles: zoomedTiles
       });
     })
+
+   d3.selectAll('.tile').attr("transform",``)
+   outlinepath.attr("transform","")
   }
 
-    const zoom = d3.zoom()
+   const zoom = d3.zoom()
       //.scaleExtent([1 << 8, 1 << 21]) //this doesn't seem to actually matter
       .on("zoom", zoomies)
       .on("end", drawTiles)
 
-  
-    const svg = d3.select(this.refs.svg);
+   const center = projection(mapCentroid.geometry.coordinates)
+   const svg = d3.select(this.refs.svg);
+    
     svg.call(zoom);
     svg.call(zoom.transform, d3.zoomIdentity
-      .translate(width/2,height/2)
-      .scale(getZoom())) // this sets our zoom scale to be able to take in map tiles, but it also fucks up 
-   
-  }
+      //.translate(width/2,height/2)
+      .scale(projscale*(Math.PI*2))
+      //.translate(-center[0],-center[1])
+      ) // this sets our zoom scale to be able to take in map tiles, but it also fucks up our polygon? 
+      // outlinepath.attr("transform",`translate(${mapCentroid.geometry.coordinates[0]},${mapCentroid.geometry.coordinates[1]}) scale(1)`)
+ 
+  
+}
+
+
 
   getClass = d => {
     let kind = d.properties.kind || '';
@@ -159,7 +177,7 @@ class Map extends Component {
         style={{ margin: "20px" }}
       >
        {tiles.map((g,i) => (
-          <g key={`group${i}`} className="tile" id={g.coords}>
+          <g key={g.coords} className="tile" id={g.coords}>
          { g.mapTile.map((path,j) => (
               <path key={`path${i}${j}`} className={path.class} d={path.d} id={path.coords}/>
           ))}
