@@ -45,34 +45,15 @@ class Map extends Component {
       .scale(projscale * (2 * Math.PI))
       .translate(projection([0, 0]))
 
-    console.log(d3tile())
+    //console.log(d3tile())
     const getZoom = () => { return 1 << (8 + (d3tile()[0].z)) } //this is basically a hack for reconciling polygon scaling and tile scaling
 
-    // const mapTiles = d3tile().map(async d => {
-    //   d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
-    //   return d;
-    // })
-    // Promise.all(mapTiles).then(ti => {
-    //   const mapTiles = ti.map(t => {
-    //     const obj = {};
-    //     obj.coords= `tile-${t.x}-${t.y}-${t.z}`
-    //     obj.mapTile = this.zenArray(t).map(d => ({
-    //       d: path(d),
-    //       class: this.getClass(d),
-    //     }))
-    //     return obj;
-    //     //return mapTile;
-    //   });
-    //   this.setState({
-    //     tiles: mapTiles,
-    //     outline
-    //   });
-    // })
 
     const zoomies = () => {
       projection
         .scale(d3.event.transform.k / (2 * Math.PI))
         .translate([d3.event.transform.x, d3.event.transform.y]);
+
 
       const outline = path(mapData);
 
@@ -81,11 +62,18 @@ class Map extends Component {
       }
       setOutline()
 
-      //     outlinepath
-      //     .attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y}) scale(${d3.event.transform.k/getZoom()})`)
-      //     // .style("stroke-width", 1 / (d3.event.transform.k/getZoom()))
+      console.log(d3.event.transform)
 
-      svg.selectAll('.tile').attr("transform", `translate(${d3.event.transform.x}, ${d3.event.transform.y} scale(${d3.event.transform.k/getZoom()})`)
+      const zoomK =  d3.event.transform.k/getZoom()
+      
+      console.log(Math.round(zoomK) > 1 ? Math.round(zoomK) : zoomK)
+
+
+      //ahh ok that's why the modulo thing makes sense
+   // outlinepath
+   //        .attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y}) scale(${d3.event.transform.k/getZoom()})`).style("stroke-width", 1 / (d3.event.transform.k/getZoom()))
+
+      svg.selectAll('.tile').attr("transform", `translate(${d3.event.transform.x-(width/2)}, ${d3.event.transform.y-(height/2)}) scale(${Math.round(zoomK) > 0 ? Math.round(zoomK) : 1})`)
 
     }
 
@@ -96,7 +84,7 @@ class Map extends Component {
         .scale(d3.event.transform.k)
         .translate(projection([0, 0]));
 
-      console.log(zoomTile())
+      //console.log(zoomTile())
       const zoomTiles = zoomTile().map(async d => {
         d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
         return d;
@@ -118,7 +106,7 @@ class Map extends Component {
       })
 
       svg.selectAll('.tile').attr("transform", ``)
-      outlinepath.attr("transform", "")
+      //outlinepath.attr("transform", "")
     }
 
     const zoom = d3.zoom()
@@ -130,7 +118,7 @@ class Map extends Component {
 
     svg.call(zoom);
     svg.call(zoom.transform, d3.zoomIdentity
-      //.translate(width/2,height/2)
+      .translate(width/2,height/2)
       .scale(projscale * (Math.PI * 2))
       //.translate(-center[0],-center[1])
     ) // this sets our zoom scale to be able to take in map tiles, but it also fucks up our polygon? 
