@@ -14,7 +14,8 @@
     "path": "^0.12.7",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-scripts": "2.1.8"
+    "react-scripts": "2.1.8",
+    "versor": "0.0.4"
   },
   "scripts": {
     "start": "npm-run-all -p listen develop",

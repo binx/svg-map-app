@@ -20,9 +20,12 @@ class Map extends Component {
 
     const mapCentroid = centroid(mapData.geometry);
 
-    const projection = d3.geoMercator()
-      .translate([0, 0])
+    const svg = d3.select(this.refs.svg)
+
+    const mercator = d3.geoMercator()
+      .translate([width / 2, height / 2])
       .center(mapCentroid.geometry.coordinates)
+      .clipExtent([[0,0],[width,height]])
       .fitExtent(
         [
           [width * .05, height * .05],
@@ -31,67 +34,42 @@ class Map extends Component {
         mapData
       );
 
+    const projection = d3.geoOrthographic()
+      .center(mapCentroid.geometry.coordinates)
+      .translate([width/4,height/4]) //I honestly don't know why this works
+      .rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]])
+      //.clipExtent([[0,0],[width,height]])
+      .fitExtent(
+          [
+            [width * .05, height * .05],
+            [width - (width * .05), height - (height * .05)]
+          ],
+          mapData
+        )
+
     const projscale = projection.scale();
     const path = d3.geoPath().projection(projection);
 
-    const svg = d3.select(this.refs.svg);
+    
 
-
-    //console.log(outline)
-    const outlinepath = d3.select(this.refs.outline)
-
-    const d3tile = tile()
-      .size([width, height])
-      .scale(projscale * (2 * Math.PI))
-      .translate(projection([0, 0]))
-
-    //console.log(d3tile())
-    const getZoom = () => { return 1 << (8 + (d3tile()[0].z)) } //this is basically a hack for reconciling polygon scaling and tile scaling
-
-
-    const zoomies = () => {
-      projection
-        .scale(d3.event.transform.k / (2 * Math.PI))
-        .translate([d3.event.transform.x, d3.event.transform.y]);
-
-
-      const outline = path(mapData);
-
-      const setOutline = () => {
-        this.setState({ outline: outline })
-      }
-      setOutline()
-
-      console.log(d3.event.transform)
-
-      const zoomK =  d3.event.transform.k/getZoom()
-      
-      console.log(Math.round(zoomK) > 1 ? Math.round(zoomK) : zoomK)
-
-
-      //ahh ok that's why the modulo thing makes sense
-   // outlinepath
-   //        .attr("transform",`translate(${d3.event.transform.x}, ${d3.event.transform.y}) scale(${d3.event.transform.k/getZoom()})`).style("stroke-width", 1 / (d3.event.transform.k/getZoom()))
-
-      svg.selectAll('.tile').attr("transform", `translate(${d3.event.transform.x-(width/2)}, ${d3.event.transform.y-(height/2)}) scale(${Math.round(zoomK) > 0 ? Math.round(zoomK) : 1})`)
-
-    }
-
+    
     const drawTiles = () => {
 
-      const zoomTile = tile()
-        .size([width, height])
-        .scale(d3.event.transform.k)
-        .translate(projection([0, 0]));
+      const merctile = tile()
+      .size([width, height])
+      .scale(mercator.scale() * (2 * Math.PI))
+      .translate(mercator([0, 0]))
 
-      //console.log(zoomTile())
-      const zoomTiles = zoomTile().map(async d => {
-        d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
-        return d;
-      })
+      console.log(mercator.scale())
+      console.log(merctile())
 
-      Promise.all(zoomTiles).then(ti => {
-        const zoomedTiles = ti.map(t => {
+    const mapTiles = merctile().map(async d => {
+      d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
+      return d;
+    })
+
+    Promise.all(mapTiles).then(ti => {
+      const mapTiles = ti.map(t => {
           const obj = {};
           obj.coords = `tile-${t.x}-${t.y}-${t.z}`
           obj.mapTile = this.zenArray(t).map(d => ({
@@ -101,33 +79,38 @@ class Map extends Component {
           return obj;
         });
         this.setState({
-          tiles: zoomedTiles
+          tiles: mapTiles,
+          outline: path(mapData)
         });
-      })
+    })
 
-      svg.selectAll('.tile').attr("transform", ``)
-      //outlinepath.attr("transform", "")
+    svg.selectAll('path').attr('transform','')
+
+    }
+
+    drawTiles();
+
+    const zoomies = () => {
+      mercator.scale(mercator.scale() * d3.event.transform.k)
+      .translate([d3.event.transform.x, d3.event.transform.y])
+
+      projection
+        .scale(projection.scale() * d3.event.transform.k)
+        .translate([d3.event.transform.x, d3.event.transform.y])
+
+      svg.selectAll('path').attr("transform",d3.event.transform)
+      this.setState({outline: path(mapData)})
+      console.log(d3.event.transform)
+
+      //svg.selectAll('.tile').attr('transform', "")
     }
 
     const zoom = d3.zoom()
-      //.scaleExtent([1 << 8, 1 << 21]) //this doesn't seem to actually matter
       .on("zoom", zoomies)
       .on("end", drawTiles)
-
-    const center = projection(mapCentroid.geometry.coordinates)
-
     svg.call(zoom);
-    svg.call(zoom.transform, d3.zoomIdentity
-      .translate(width/2,height/2)
-      .scale(projscale * (Math.PI * 2))
-      //.translate(-center[0],-center[1])
-    ) // this sets our zoom scale to be able to take in map tiles, but it also fucks up our polygon? 
-    // outlinepath.attr("transform",`translate(${mapCentroid.geometry.coordinates[0]},${mapCentroid.geometry.coordinates[1]}) scale(1)`)
-
-
+   
   }
-
-
 
   getClass = d => {
     let kind = d.properties.kind || '';
@@ -143,7 +126,7 @@ class Map extends Component {
       if (t.data[layer]) {
         for (let i in t.data[layer].features) {
           // Don't include any label placement points
-          // if(d.data[layer].features[i].properties.label_placement) { continue }
+          //if(t.data[layer].features[i].properties.label_placement) { continue }
 
           // // Don't show large buildings at z13 or below.
           // if(zoom <= 13 && layer == 'buildings') { continue }
@@ -166,9 +149,8 @@ class Map extends Component {
     const { tiles = [], outline } = this.state;
     const { width, height } = this.props.mapSettings;
     return (
-      <div>
       <svg
-        width={width} height={height}
+        width={ width } height={ height}
         ref="svg"
         style={{ margin: "20px" }}
       >
@@ -181,9 +163,9 @@ class Map extends Component {
           ))}
         <path className="site" d={outline} id="site" ref="outline"/>
       </svg>
-      </div>
     );
   }
 }
+
 
 export default Map;

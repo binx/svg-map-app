@@ -43,18 +43,19 @@ class Params extends Component {
 
     return (
       <div>
-        <Select name="thisID" style={{ width: 120 }}>
+        <Select name="thisID" style={{ width: 120 }} onChange={e => this.updateSetting("label", e)}>
           {dedupe.map((k, i) => (
             <Option value={k} key={`option${i}`}>
               {k}
             </Option>
           ))}
         </Select>
+
         <span>
-          <InputNumber value={width} 
+          <span>width:</span> <InputNumber value={width} 
             onChange={e => this.updateSetting("width", e)}
           />
-          <InputNumber value={height} 
+          <span>height:</span><InputNumber value={height} 
             onChange={e => this.updateSetting("height", e)}
           />
         </span>
