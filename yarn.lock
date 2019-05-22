@@ -801,6 +801,10 @@
   version "1.4.0"
   resolved "https://artifacts.netflix.com/api/npm/npm-netflix/@csstools/convert-colors/-/convert-colors-1.4.0.tgz#ad495dc41b12e75d588c6db8b9834f08fa131eb7"
 
+"@mapbox/sphericalmercator@^1.1.0":
+  version "1.1.0"
+  resolved "https://artifacts.netflix.com/api/npm/npm-netflix/@mapbox/sphericalmercator/-/sphericalmercator-1.1.0.tgz#f3b1af042620716a1289fc41e1e97f610823aefe"
+
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
   resolved "https://artifacts.netflix.com/api/npm/npm-netflix/@mrmlnc/readdir-enhanced/-/readdir-enhanced-2.2.1.tgz#524af240d1a360527b730475ecfa1344aa540dde"
@@ -9490,6 +9494,10 @@ verror@1.10.0:
     assert-plus "^1.0.0"
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
+
+versor@0.0.4:
+  version "0.0.4"
+  resolved "https://artifacts.netflix.com/api/npm/npm-netflix/versor/-/versor-0.0.4.tgz#2589e52bd317d670baa4ce33809a64b535a1fcb0"
 
 vfile-message@^1.0.0:
   version "1.1.1"
