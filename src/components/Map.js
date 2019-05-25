@@ -17,6 +17,7 @@ class Map extends Component {
   }
   createMapDisplay = () => {
     const mapData = this.props.data;
+    console.log(mapData)
     const { width, height } = this.props.mapSettings;
 
     const mapCentroid = centroid(mapData.geometry);
@@ -43,16 +44,42 @@ class Map extends Component {
     const path = d3.geoPath(projection)
 
     const getTiles = () => {
-      console.log(projection.scale())
+
+      // const makePolygon = () => {
+      //   let n = projection.invert([0,0])
+      //   let e = projection.invert([width,0])
+      //   let s = projection.invert([width,height])
+      //   let w = projection.invert([0,height])
+      //   console.log(n,e,s,w)
+      //   let polygon = {
+      //   "type": "FeatureCollection",
+      //   "features": [{
+      //        "type": "Feature",
+      //        "properties":{},
+      //         "geometry": {
+      //           "type": "Polygon",
+      //           "coordinates": [
+      //              [n,
+      //               e,
+      //               s,
+      //               w,
+      //               n
+      //          ] 
+      //          ]
+      //     }
+      //   }]
+      // }
+      // //this.setState({ boundaries: path(polygon) })
+      // projection.fitSize([width,height],polygon)
+      // }
+
+      // makePolygon()
+      //console.log(projection.scale())
       const tiles = [];
       const z = (0 | Math.log(projection.scale()) / Math.LN2) - 6
 
       const upperbound = projection.invert([0, 0])
       const lowerbound = projection.invert([width, height])
-
-      console.log(projection(upperbound), projection(lowerbound))
-      console.log(z)
-      console.log(upperbound, lowerbound)
 
       const merc = new SphericalMercator({
         size: 256
@@ -75,7 +102,7 @@ class Map extends Component {
 
       let tileID = tiles.map(t => `tile-${t.x}-${t.y}-${t.z}`)
       this.setState({ tiles: tileID })
-      console.log(tileID)
+      //console.log(tileID)
 
       const mapTiles = Promise.all(tiles.map(async d => {
         d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
@@ -108,9 +135,8 @@ class Map extends Component {
 
     let rotate0, coords0;
     const coords = () => projection.rotate(rotate0).invert([d3.event.x, d3.event.y]);
-
     // svg.call(zoom);
-
+    
     svg
       .call(d3.drag()
         .on('start', () => {
@@ -128,22 +154,49 @@ class Map extends Component {
         })
         .on('end', () => {
           getTiles()
+
         })
       )
     const zoomies = () => {
       const { x, y, k } = d3.event.transform;
-      projection
-        //.scale(initialScale *d3.event.transform.k)
-        .fitExtent(
-          [
-            [(width * k * .05) + x, (height * k * .05) + y],
-            [width * k - (width * k * .05) + x, height * k - (height * k * .05) + y]
-          ],
-          mapData
-        )
-
+      // projection
+      //   //.scale(initialScale *d3.event.transform.k)
+      //   .fitExtent(
+      //     [
+      //       [(width * k * .05) + x, (height * k * .05) + y],
+      //       [width * k - (width * k * .05) + x, height * k - (height * k * .05) + y]
+      //     ],
+      //     mapData
+      //   )
+     
       svg.selectAll('g').attr('transform', d3.event.transform)
 
+      let n = projection.invert([0,0])
+      let e = projection.invert([width,0])
+      let s = projection.invert([width,height])
+      let w = projection.invert([0,height])
+      console.log(n,e,s,w)
+      let polygon = {
+      "type": "FeatureCollection",
+      "features": [{
+           "type": "Feature",
+           "properties":{},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                 [n,
+                  e,
+                  s,
+                  w,
+                  n
+             ] 
+             ]
+        }
+        }]
+      }
+    
+      projection.fitSize([width * k +x,height*k +y],polygon)
+      
       this.setState({ outline: path(mapData) })
     }
     const zoom = d3.zoom()

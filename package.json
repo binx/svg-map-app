@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@mapbox/sphericalmercator": "^1.1.0",
+    "@turf/bbox-polygon": "^6.0.1",
     "@turf/centroid": "^6.0.2",
     "antd": "^3.16.1",
     "body-parser": "^1.18.3",
