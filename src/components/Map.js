@@ -94,31 +94,34 @@ class Map extends Component {
         })
       })
 
-      // const mapTiles = d => {
-      //   d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
-      // }
-
-     const tileData = tiles.map(t => {
-        const obj = {}
-        obj.coords = `tile-${t.x}-${t.y}-${t.z}`
-        let promise = d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${t.z}/${t.x}/${t.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`).then(function(ti){return ti})
-        obj.data = promise.then(t => {return zenArray(t)})
-        return obj;
-      })
-      console.log(tileData)
-      //this.setState({tiles:tileData})
       
+    //this.setState({tiles: tiles.map(t => { `tile-${t.x}-${t.y}-${t.z}` })})
+     const getTiles = Promise.all(tiles.map(async d => {
+        d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
+        
+        return d;
+      }))
+
+     getTiles.then(ti =>{
+      const tileData = ti.map(t => {
+        const obj ={}
+        obj.coords = `tile-${t.x}-${t.y}-${t.z}`
+        obj.data = zenArray(t.data)
+        return obj
+      })
+      this.setState({tiles: tileData})
       tileData.forEach(function(ti){
         svg.select(`#${ti.coords}`)
           .selectAll('path')
+          .remove()
           .data(ti.data)
           .enter().append("path")
           .attr("d", path)
           .attr("class", function(t){ return getClass(t)})
           .exit();
       })
-
-
+     })
+      
       this.setState({ outline: path(mapData) })
       d3.selectAll('g').attr('transform', "")
     }
