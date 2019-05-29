@@ -17,7 +17,6 @@ class Map extends Component {
   }
   createMapDisplay = () => {
     const mapData = this.props.data;
-    console.log(mapData)
     const { width, height } = this.props.mapSettings;
 
     const mapCentroid = centroid(mapData.geometry);
@@ -43,40 +42,35 @@ class Map extends Component {
 
     const path = d3.geoPath(projection)
 
+    const newPolygon = () => {
+      let n = projection.invert([0,0])
+      let e = projection.invert([width,0])
+      let s = projection.invert([width,height])
+      let w = projection.invert([0,height])
+      let polygon = {
+      "type": "FeatureCollection",
+      "features": [{
+           "type": "Feature",
+           "properties":{},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                 [n,
+                  e,
+                  s,
+                  w,
+                  n
+             ] 
+             ]
+        }
+        }]
+      }
+      return polygon;
+    }
+
     const getTiles = () => {
-
-      // const makePolygon = () => {
-      //   let n = projection.invert([0,0])
-      //   let e = projection.invert([width,0])
-      //   let s = projection.invert([width,height])
-      //   let w = projection.invert([0,height])
-      //   console.log(n,e,s,w)
-      //   let polygon = {
-      //   "type": "FeatureCollection",
-      //   "features": [{
-      //        "type": "Feature",
-      //        "properties":{},
-      //         "geometry": {
-      //           "type": "Polygon",
-      //           "coordinates": [
-      //              [n,
-      //               e,
-      //               s,
-      //               w,
-      //               n
-      //          ] 
-      //          ]
-      //     }
-      //   }]
-      // }
-      // //this.setState({ boundaries: path(polygon) })
-      // projection.fitSize([width,height],polygon)
-      // }
-
-      // makePolygon()
-      //console.log(projection.scale())
       const tiles = [];
-      const z = (0 | Math.log(projection.scale()) / Math.LN2) - 6
+      const z = (0 | Math.log(projection.scale()) / Math.LN2) - 5
 
       const upperbound = projection.invert([0, 0])
       const lowerbound = projection.invert([width, height])
@@ -100,33 +94,31 @@ class Map extends Component {
         })
       })
 
-      let tileID = tiles.map(t => `tile-${t.x}-${t.y}-${t.z}`)
-      this.setState({ tiles: tileID })
-      //console.log(tileID)
+      // const mapTiles = d => {
+      //   d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
+      // }
 
-      const mapTiles = Promise.all(tiles.map(async d => {
-        d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
-        return d;
-      }))
-
-      const tilewrap = svg.selectAll('#tileWrap')
-
-      tilewrap.selectAll('g').remove()
-
-      tilewrap.selectAll('g').data(tileID).enter().append('g').attr('id', function(t) { return t })
-
-      mapTiles.then(function(ti) {
-        ti.forEach(function(tile) {
-          let arr = zenArray(tile)
-          svg.select(`#tile-${tile.x}-${tile.y}-${tile.z}`)
-            .selectAll('path')
-            .data(arr)
-            .enter().append("path")
-            .attr("d", path)
-            .attr("class", function(d) { return getClass(d) })
-            .exit();
-        })
+     const tileData = tiles.map(t => {
+        const obj = {}
+        obj.coords = `tile-${t.x}-${t.y}-${t.z}`
+        let promise = d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${t.z}/${t.x}/${t.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`).then(function(ti){return ti})
+        obj.data = promise.then(t => {return zenArray(t)})
+        return obj;
       })
+      console.log(tileData)
+      //this.setState({tiles:tileData})
+      
+      tileData.forEach(function(ti){
+        svg.select(`#${ti.coords}`)
+          .selectAll('path')
+          .data(ti.data)
+          .enter().append("path")
+          .attr("d", path)
+          .attr("class", function(t){ return getClass(t)})
+          .exit();
+      })
+
+
       this.setState({ outline: path(mapData) })
       d3.selectAll('g').attr('transform', "")
     }
@@ -150,7 +142,7 @@ class Map extends Component {
             rotate0[1] + coords1[1] - coords0[1],
           ])
           this.setState({ outline: path(mapData) })
-          getTiles()
+          //svg.selectAll('path').attr('d', path())
         })
         .on('end', () => {
           getTiles()
@@ -159,48 +151,34 @@ class Map extends Component {
       )
     const zoomies = () => {
       const { x, y, k } = d3.event.transform;
-      // projection
-      //   //.scale(initialScale *d3.event.transform.k)
-      //   .fitExtent(
-      //     [
-      //       [(width * k * .05) + x, (height * k * .05) + y],
-      //       [width * k - (width * k * .05) + x, height * k - (height * k * .05) + y]
-      //     ],
-      //     mapData
-      //   )
-     
-      svg.selectAll('g').attr('transform', d3.event.transform)
+      projection
+        //.scale(initialScale *d3.event.transform.k)
+        .fitExtent(
+          [
+            [(width * k * .05) + x, (height * k * .05) + y],
+            [width * k - (width * k * .05) + x, height * k - (height * k * .05) + y]
+          ],
+          newPolygon()
+        );
 
-      let n = projection.invert([0,0])
-      let e = projection.invert([width,0])
-      let s = projection.invert([width,height])
-      let w = projection.invert([0,height])
-      console.log(n,e,s,w)
-      let polygon = {
-      "type": "FeatureCollection",
-      "features": [{
-           "type": "Feature",
-           "properties":{},
-            "geometry": {
-              "type": "Polygon",
-              "coordinates": [
-                 [n,
-                  e,
-                  s,
-                  w,
-                  n
-             ] 
-             ]
-        }
-        }]
+      if (projection.scale() === -0 ){
+        projection
+        //.scale(initialScale *d3.event.transform.k)
+        .fitExtent(
+          [
+            [(width * .05) + x, (height * .05) + y],
+            [width - (width * .05) + x, height - (height * .05) + y]
+          ],
+          mapData
+        )
       }
-    
-      projection.fitSize([width * k +x,height*k +y],polygon)
-      
+      svg.selectAll('g').attr('transform', d3.event.transform)
+      //projection.fitSize([(width * k)+x,(height*k)+y],newPolygon())
+      console.log(projection.scale())
       this.setState({ outline: path(mapData) })
     }
     const zoom = d3.zoom()
-      //.scaleExtent(projection.scale(), projection.scale*1.5)
+      .scaleExtent([0.2,2.5])
       .on("zoom", zoomies)
       .on("end", getTiles)
     svg.call(zoom)
@@ -212,14 +190,15 @@ class Map extends Component {
       return `${d.layer_name}-layer ${kind}`;
     }
 
+    
     const zenArray = t => {
       let features = [];
       const layers = ['water', 'landuse', 'roads', 'buildings'];
       layers.forEach(function(layer) {
-        if (t.data[layer]) {
-          for (let i in t.data[layer].features) {
+        if (t[layer]) {
+          for (let i in t[layer].features) {
             // Don't include any label placement points
-            if (t.data[layer].features[i].properties.label_placement) { continue }
+            if (t[layer].features[i].properties.label_placement) { continue }
 
             // // Don't show large buildings at z13 or below.
             // if(zoom <= 13 && layer == 'buildings') { continue }
@@ -227,7 +206,7 @@ class Map extends Component {
             // // Don't show small buildings at z14 or below.
             // if(zoom <= 14 && layer == 'buildings' && data[layer].features[i].properties.area < 2000) { continue }
 
-            features.push(t.data[layer].features[i]);
+            features.push(t[layer].features[i]);
           }
         }
       });
@@ -247,7 +226,12 @@ class Map extends Component {
         ref="svg"
         style={{ margin: "20px" }}
       >
-      <g id = "tileWrap" className="tile"></g>
+      <g id = "tileWrap" className="tile">
+       {tiles.map((g,i) => (
+          <g key={g.coords} className="tile" id={g.coords}>
+          </g>
+          ))}
+      </g>
         <path className="site" d={outline} id="site" ref="outline"/>
       </svg>
     );
