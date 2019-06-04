@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import centroid from "@turf/centroid";
-// import { tile } from "d3-tile";
+import { Button } from "antd";
 import * as d3 from "d3";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
 
@@ -130,11 +130,26 @@ class Map extends Component {
         return ti;
   }
   
- 
+  const makeSVG = tiles => {
+    let copySVG = document.createElement('svg')
+
+    tiles.map(tile => {
+      copySVG.insertAdjacentHTML('afterbegin', `<g id = ${tile.coords} class="tile"></g>`) 
+      
+      let paths = tile.data.map(t => {
+          return `<path class= ${getClass(t)} d=${path(t)}></path>`
+        })
+      copySVG.querySelector(`#${tile.coords}`).insertAdjacentHTML('afterbegin', paths.join(' '))
+    })
+    this.setState({ copySVG: copySVG })
+  }
+
   const tileMaker = () => {
      return tilePromise(getTiles()).then(t => {
       drawTiles(sortTileData(t))
+      makeSVG(sortTileData(t))
       svg.selectAll('.tile').attr('transform','')
+      
     })
   }
 
@@ -158,7 +173,6 @@ class Map extends Component {
             rotate0[1] + coords1[1] - coords0[1],
           ])
           svg.selectAll('.tile').attr('transform', `translate (${d3.event.x-d3.event.subject.x}, ${d3.event.y-d3.event.subject.y})`)
-          console.log(d3.event)
           this.setState({ outline: path(mapData) })
         })
         .on('end', () => {
@@ -198,9 +212,9 @@ class Map extends Component {
 
     const getClass = d => {
       let kind = d.properties.kind || '';
-      if (d.properties.boundary)
-        kind += '_boundary';
-      return `${d.layer_name}-layer ${kind}`;
+      // if (d.properties.boundary)
+      //   kind += '_boundary';
+      return `${kind}`;
     }
 
     
@@ -229,11 +243,18 @@ class Map extends Component {
         0
       ));
     }
-  }
+}
+   
   render() {
-    const { tiles = [], outline } = this.state;
+    const { tiles = [], outline, copySVG } = this.state;
     const { width, height } = this.props.mapSettings;
+
+    let svgText = `<svg xmlns="http://www.w3.org/2000/svg"> ${ copySVG }`;
+    let blob = new Blob([svgText], {type: 'text/xml'});
+    let url = URL.createObjectURL(blob);
+
     return (
+      <div>
       <svg
         width={ width } height={ height}
         ref="svg"
@@ -243,6 +264,13 @@ class Map extends Component {
       </g>
         <path className="site" d={outline} id="site" ref="outline"/>
       </svg>
+      <div style={{ margin: "10px"}}>
+      <Button type="primary"
+      >
+          Download SVG
+        </Button>
+      </div>
+        </div>
     );
   }
 }
