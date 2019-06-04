@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import centroid from "@turf/centroid";
-import { tile } from "d3-tile";
+// import { tile } from "d3-tile";
 import * as d3 from "d3";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
 
@@ -38,7 +38,6 @@ class Map extends Component {
         ],
         mapData
       )
-    const initialScale = projection.scale()
 
     const path = d3.geoPath(projection)
 
@@ -67,7 +66,7 @@ class Map extends Component {
       }
       return polygon;
     }
-
+    //generate quadtile array
     const getTiles = () => {
       const tiles = [];
       const z = (0 | Math.log(projection.scale()) / Math.LN2) - 5
@@ -94,40 +93,54 @@ class Map extends Component {
         })
       })
 
-      
-    //this.setState({tiles: tiles.map(t => { `tile-${t.x}-${t.y}-${t.z}` })})
-     const getTiles = Promise.all(tiles.map(async d => {
+    this.setState({tiles: tiles.map(tile=>`tile-${tile.x}-${tile.y}-${tile.z}`)})
+    return tiles;
+  }
+  //make request for quadtiles
+  const tilePromise = t => {
+    const mapTiles = Promise.all(t.map(async d => {
         d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
-        
         return d;
       }))
+    return mapTiles
+  }
+//format data from request
+ const sortTileData = ti => {
+    const dataArray = []
+    ti.forEach(function(tile) {
+          let obj = {}
+          obj.data = zenArray(tile)
+          obj.coords = `tile-${tile.x}-${tile.y}-${tile.z}`
+          dataArray.push(obj)
+        })
+     return dataArray;
+   }
+  //draw map
+  const drawTiles = ti => {
+        svg.selectAll('.tile').remove()
+        ti.forEach(function(tile) {
+          //svg.selectAll('.tile').remove()
+          svg.select('#tileWrap').append('g').attr('id', tile.coords).attr('class','tile').selectAll('path')
+            .data(tile.data)
+            .enter().append("path")
+            .attr("d", path)
+            .attr("class", function(d) { return getClass(d) })
+            .exit();
+        })   
+        return ti;
+  }
+  
+ 
+  const tileMaker = () => {
+     return tilePromise(getTiles()).then(t => {
+      drawTiles(sortTileData(t))
+      svg.selectAll('.tile').attr('transform','')
+    })
+  }
 
-     getTiles.then(ti =>{
-      const tileData = ti.map(t => {
-        const obj ={}
-        obj.coords = `tile-${t.x}-${t.y}-${t.z}`
-        obj.data = zenArray(t.data)
-        return obj
-      })
-      this.setState({tiles: tileData})
-      tileData.forEach(function(ti){
-        svg.select(`#${ti.coords}`)
-          .selectAll('path')
-          .remove()
-          .data(ti.data)
-          .enter().append("path")
-          .attr("d", path)
-          .attr("class", function(t){ return getClass(t)})
-          .exit();
-      })
-     })
-      
-      this.setState({ outline: path(mapData) })
-      d3.selectAll('g').attr('transform', "")
-    }
-
-    getTiles()
-
+  tileMaker()
+  this.setState({ outline: path(mapData) })
+  
     let rotate0, coords0;
     const coords = () => projection.rotate(rotate0).invert([d3.event.x, d3.event.y]);
     // svg.call(zoom);
@@ -144,18 +157,18 @@ class Map extends Component {
             rotate0[0] + coords1[0] - coords0[0],
             rotate0[1] + coords1[1] - coords0[1],
           ])
+          svg.selectAll('.tile').attr('transform', `translate (${d3.event.x-d3.event.subject.x}, ${d3.event.y-d3.event.subject.y})`)
+          console.log(d3.event)
           this.setState({ outline: path(mapData) })
-          //svg.selectAll('path').attr('d', path())
         })
         .on('end', () => {
-          getTiles()
-
+           tileMaker()
         })
       )
     const zoomies = () => {
       const { x, y, k } = d3.event.transform;
+      svg.selectAll('.tile').attr('transform', d3.event.transform)
       projection
-        //.scale(initialScale *d3.event.transform.k)
         .fitExtent(
           [
             [(width * k * .05) + x, (height * k * .05) + y],
@@ -166,7 +179,6 @@ class Map extends Component {
 
       if (projection.scale() === -0 ){
         projection
-        //.scale(initialScale *d3.event.transform.k)
         .fitExtent(
           [
             [(width * .05) + x, (height * .05) + y],
@@ -175,15 +187,13 @@ class Map extends Component {
           mapData
         )
       }
-      svg.selectAll('g').attr('transform', d3.event.transform)
-      //projection.fitSize([(width * k)+x,(height*k)+y],newPolygon())
-      console.log(projection.scale())
+      
       this.setState({ outline: path(mapData) })
     }
     const zoom = d3.zoom()
-      .scaleExtent([0.2,2.5])
+      .scaleExtent([0.2,2])
       .on("zoom", zoomies)
-      .on("end", getTiles)
+      .on("end", tileMaker)
     svg.call(zoom)
 
     const getClass = d => {
@@ -198,10 +208,10 @@ class Map extends Component {
       let features = [];
       const layers = ['water', 'landuse', 'roads', 'buildings'];
       layers.forEach(function(layer) {
-        if (t[layer]) {
-          for (let i in t[layer].features) {
+        if (t.data[layer]) {
+          for (let i in t.data[layer].features) {
             // Don't include any label placement points
-            if (t[layer].features[i].properties.label_placement) { continue }
+            if (t.data[layer].features[i].properties.label_placement) { continue }
 
             // // Don't show large buildings at z13 or below.
             // if(zoom <= 13 && layer == 'buildings') { continue }
@@ -209,7 +219,7 @@ class Map extends Component {
             // // Don't show small buildings at z14 or below.
             // if(zoom <= 14 && layer == 'buildings' && data[layer].features[i].properties.area < 2000) { continue }
 
-            features.push(t[layer].features[i]);
+            features.push(t.data[layer].features[i]);
           }
         }
       });
@@ -229,11 +239,7 @@ class Map extends Component {
         ref="svg"
         style={{ margin: "20px" }}
       >
-      <g id = "tileWrap" className="tile">
-       {tiles.map((g,i) => (
-          <g key={g.coords} className="tile" id={g.coords}>
-          </g>
-          ))}
+      <g id = "tileWrap">
       </g>
         <path className="site" d={outline} id="site" ref="outline"/>
       </svg>
