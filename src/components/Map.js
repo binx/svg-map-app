@@ -40,7 +40,7 @@ class Map extends Component {
       )
 
     const path = d3.geoPath(projection)
-
+    // for use with zooms
     const newPolygon = () => {
       let n = projection.invert([0,0])
       let e = projection.invert([width,0])
@@ -66,20 +66,26 @@ class Map extends Component {
       }
       return polygon;
     }
+    // there wasn't actually a good reason to break these into smaller functions, I thought that there was but by the time I realized it was unnecessary it was too late
+
     //generate quadtile array
     const getTiles = () => {
       const tiles = [];
       const z = (0 | Math.log(projection.scale()) / Math.LN2) - 5
-
-      const upperbound = projection.invert([0, 0])
-      const lowerbound = projection.invert([width, height])
-
+      // this is suboptimal
+      let upperbound = ''
+      let lowerbound = ''
+      if (z <= 4){
+        upperbound = [-180,90]
+        lowerbound = [180,-180]
+      } else{
+        upperbound = projection.invert([0, 0])
+        lowerbound = projection.invert([width, height])
+      }
       const merc = new SphericalMercator({
         size: 256
       })
-
       const xyz = merc.xyz([upperbound[0], upperbound[1], lowerbound[0], lowerbound[1]], z)
-
       const rows = d3.range(xyz.minX, xyz.maxX + 1)
       const cols = d3.range(xyz.minY, xyz.maxY + 1)
 
@@ -104,7 +110,6 @@ class Map extends Component {
       }))
     return mapTiles
   }
-//format data from request
  const sortTileData = ti => {
     const dataArray = []
     ti.forEach(function(tile) {
@@ -114,7 +119,7 @@ class Map extends Component {
           dataArray.push(obj)
         })
      return dataArray;
-   }
+ }
   //draw map
   const drawTiles = ti => {
         svg.selectAll('.tile').remove()
@@ -129,13 +134,12 @@ class Map extends Component {
         })   
         return ti;
   }
-  
+  // rendering our svg in the background every time we re-render
+  // todo: deal with computedStyle
   const makeSVG = tiles => {
     let copySVG = document.createElement('svg')
-
     tiles.map(tile => {
       copySVG.insertAdjacentHTML('afterbegin', `<g id = ${tile.coords} class="tile"></g>`) 
-      
       let paths = tile.data.map(t => {
           return `<path class= ${getClass(t)} d=${path(t)}></path>`
         })
@@ -150,7 +154,6 @@ class Map extends Component {
       drawTiles(sortTileData(t))
       makeSVG(sortTileData(t))
       svg.selectAll('.tile').attr('transform','')
-      
     })
   }
 
@@ -158,9 +161,7 @@ class Map extends Component {
   this.setState({ outline: path(mapData) })
   
     let rotate0, coords0;
-    const coords = () => projection.rotate(rotate0).invert([d3.event.x, d3.event.y]);
-    // svg.call(zoom);
-    
+    const coords = () => projection.rotate(rotate0).invert([d3.event.x, d3.event.y]); 
     svg
       .call(d3.drag()
         .on('start', () => {
@@ -206,18 +207,17 @@ class Map extends Component {
       this.setState({ outline: path(mapData) })
     }
     const zoom = d3.zoom()
-      .scaleExtent([0.2,2])
+      .scaleExtent([0.2,2]) //semi-arbitrary, basically the limits of where the map doesn't totally fuck up and break
       .on("zoom", zoomies)
       .on("end", tileMaker)
     svg.call(zoom)
 
     const getClass = d => {
       let kind = d.properties.kind || '';
-      // if (d.properties.boundary)
-      //   kind += '_boundary';
+      if (d.properties.boundary)
+        kind += '_boundary';
       return `${kind}`;
     }
-
     
     const zenArray = t => {
       let features = [];
