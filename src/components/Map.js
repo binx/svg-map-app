@@ -141,7 +141,8 @@ class Map extends Component {
         })
       copySVG.querySelector(`#${tile.coords}`).insertAdjacentHTML('afterbegin', paths.join(' '))
     })
-    this.setState({ copySVG: copySVG })
+    this.setState({ copySVG: copySVG.innerHTML })
+    return copySVG
   }
 
   const tileMaker = () => {
@@ -249,9 +250,16 @@ class Map extends Component {
     const { tiles = [], outline, copySVG } = this.state;
     const { width, height } = this.props.mapSettings;
 
-    let svgText = `<svg xmlns="http://www.w3.org/2000/svg"> ${ copySVG }`;
-    let blob = new Blob([svgText], {type: 'text/xml'});
-    let url = URL.createObjectURL(blob);
+    const download = () => {
+      const svgText = `<svg xmlns="http://www.w3.org/2000/svg">${ copySVG }`;
+      const blob = new Blob([svgText], {type: 'text/xml'});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a')
+      link.setAttribute('href', url)
+      link.setAttribute('download', 'map.svg')
+      link.click()
+    }
+    
 
     return (
       <div>
@@ -266,6 +274,7 @@ class Map extends Component {
       </svg>
       <div style={{ margin: "10px"}}>
       <Button type="primary"
+      onClick={() => download()}
       >
           Download SVG
         </Button>
