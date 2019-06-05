@@ -22,7 +22,7 @@ class Map extends Component {
     const mapCentroid = centroid(mapData.geometry);
 
     const svg = d3.select(this.refs.svg)
-
+   
     const projection = d3.geoOrthographic()
       .center(mapCentroid.geometry.coordinates)
       .translate([width / 4, height / 4]) //I honestly don't know why this works
@@ -40,7 +40,8 @@ class Map extends Component {
       )
 
     const path = d3.geoPath(projection)
-    // for use with zooms
+    
+    // for zooms
     const newPolygon = () => {
       let n = projection.invert([0,0])
       let e = projection.invert([width,0])
@@ -137,15 +138,41 @@ class Map extends Component {
   // rendering our svg in the background every time we re-render
   // todo: deal with computedStyle
   const makeSVG = tiles => {
+    const styles = new Set()
+    const cssArray = []
     let copySVG = document.createElement('svg')
     tiles.map(tile => {
       copySVG.insertAdjacentHTML('afterbegin', `<g id = ${tile.coords} class="tile"></g>`) 
       let paths = tile.data.map(t => {
-          return `<path class= ${getClass(t)} d=${path(t)}></path>`
+          if (path(t) != null){
+            styles.add(getClass(t))
+            return `<path class= ${getClass(t)} d=${path(t)}></path>`
+          }
         })
       copySVG.querySelector(`#${tile.coords}`).insertAdjacentHTML('afterbegin', paths.join(' '))
     })
+    styles.add('site')
+    styles.add('tile')
+    console.log(styles)
+    Array.from(styles).forEach(s => {
+      for( let i in document.styleSheets ){
+      if(document.styleSheets[i].cssRules) {
+        var rules = document.styleSheets[i].cssRules;
+        for (let r in rules) {
+          if (rules[r].selectorText){
+            if (rules[r].selectorText.includes(s)){
+            cssArray.push(rules[r].cssText)
+            }
+          }
+         
+        }
+      }
+    }
+    })
+  
+    console.log(cssArray)
     this.setState({ copySVG: copySVG.innerHTML })
+    this.setState({ styleSheet: cssArray.join("\n")})
     return copySVG
   }
 
@@ -247,17 +274,17 @@ class Map extends Component {
 }
    
   render() {
-    const { tiles = [], outline, copySVG } = this.state;
+    const { tiles = [], outline, copySVG, styleSheet } = this.state;
     const { width, height } = this.props.mapSettings;
 
     const download = () => {
-      const svgText = `<svg xmlns="http://www.w3.org/2000/svg">${ copySVG }`;
-      const blob = new Blob([svgText], {type: 'text/xml'});
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a')
-      link.setAttribute('href', url)
-      link.setAttribute('download', 'map.svg')
-      link.click()
+        const svgText = `<svg xmlns="http://www.w3.org/2000/svg"><style type="text/css">${styleSheet}</style><svg>${ copySVG }</svg></svg>`;
+        const blob = new Blob([svgText], {type: 'text/xml'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a')
+        link.setAttribute('href', url)
+        link.setAttribute('download', 'map.svg')
+        link.click()
     }
     
 
