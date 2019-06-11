@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 
-import { Select, Button, InputNumber } from "antd";
-const Option = Select.Option;
+import { Button, InputNumber } from "antd";
 
 class Params extends Component {
   state = {};
@@ -29,40 +28,30 @@ class Params extends Component {
     this.setState({ mapSettings });
   }
   render() {
-    if (!this.state.mapSettings) return (null);
-
-    const features = this.props.data;
-    const keys = [];
-    features.forEach(function(f) {
-      const fprops = Object.keys(f.properties);
-      fprops.forEach(fp => keys.push(fp));
-    });
-    const dedupe = [...new Set(keys)];
+    if (!this.state.mapSettings || !this.props.features.length) return (null);
 
     const { width, height } = this.state.mapSettings;
 
     return (
-      <div>
-        <Select name="thisID" style={{ width: 120 }} onChange={e => this.updateSetting("label", e)}>
-          {dedupe.map((k, i) => (
-            <Option value={k} key={`option${i}`}>
-              {k}
-            </Option>
-          ))}
-        </Select>
-
+      <div className="params">
         <span>
-          <span>width:</span> <InputNumber value={width} 
+          <span>Width:</span>
+          <InputNumber
+            style={{ margin: "0 10px" }}
+            value={width} 
             onChange={e => this.updateSetting("width", e)}
           />
-          <span>height:</span><InputNumber value={height} 
+          <span>Height:</span>
+          <InputNumber
+            style={{ margin: "0 10px" }}
+            value={height} 
             onChange={e => this.updateSetting("height", e)}
           />
         </span>
         <Button type="primary" 
           onClick={() => this.props.updateSettings(this.state.mapSettings)}
         >
-          Set Parameters
+          Set Map Size
         </Button>
       </div>
     );

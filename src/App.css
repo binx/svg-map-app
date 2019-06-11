@@ -7,7 +7,6 @@
   stroke-width: 3px;
 }
 
-
 .water {
   fill: #9DD9D2;
 }
@@ -131,4 +130,16 @@
 .tile .rail {
   stroke: #503D3F;
   stroke-width: 0.5px;
+}
+
+/* app styles */
+
+.settings {
+  padding: 20px;
+}
+
+.params {
+  margin: 10px 0;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ccc;
 }

@@ -22,7 +22,7 @@ class Map extends Component {
     const mapCentroid = centroid(mapData.geometry);
 
     const svg = d3.select(this.refs.svg)
-   
+
     const projection = d3.geoOrthographic()
       .center(mapCentroid.geometry.coordinates)
       .translate([width / 4, height / 4]) //I honestly don't know why this works
@@ -40,29 +40,29 @@ class Map extends Component {
       )
 
     const path = d3.geoPath(projection)
-    
+
     // for zooms
     const newPolygon = () => {
-      let n = projection.invert([0,0])
-      let e = projection.invert([width,0])
-      let s = projection.invert([width,height])
-      let w = projection.invert([0,height])
+      let n = projection.invert([0, 0])
+      let e = projection.invert([width, 0])
+      let s = projection.invert([width, height])
+      let w = projection.invert([0, height])
       let polygon = {
-      "type": "FeatureCollection",
-      "features": [{
-           "type": "Feature",
-           "properties":{},
-            "geometry": {
-              "type": "Polygon",
-              "coordinates": [
-                 [n,
-                  e,
-                  s,
-                  w,
-                  n
-             ] 
-             ]
-        }
+        "type": "FeatureCollection",
+        "features": [{
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [n,
+                e,
+                s,
+                w,
+                n
+              ]
+            ]
+          }
         }]
       }
       return polygon;
@@ -74,12 +74,12 @@ class Map extends Component {
       const tiles = [];
       const z = (0 | Math.log(projection.scale()) / Math.LN2) - 5
       // this is suboptimal
-      let upperbound = ''
-      let lowerbound = ''
-      if (z <= 4){
-        upperbound = [-180,90]
-        lowerbound = [180,-180]
-      } else{
+      let upperbound;
+      let lowerbound;
+      if (z <= 4) {
+        upperbound = [-180, 90]
+        lowerbound = [180, -180]
+      } else {
         upperbound = projection.invert([0, 0])
         lowerbound = projection.invert([width, height])
       }
@@ -100,95 +100,98 @@ class Map extends Component {
         })
       })
 
-    this.setState({tiles: tiles.map(tile=>`tile-${tile.x}-${tile.y}-${tile.z}`)})
-    return tiles;
-  }
-  //make request for quadtiles
-  const tilePromise = t => {
-    const mapTiles = Promise.all(t.map(async d => {
+      this.setState({ tiles: tiles.map(tile => `tile-${tile.x}-${tile.y}-${tile.z}`) })
+      return tiles;
+    }
+    //make request for quadtiles
+    const tilePromise = t => {
+      const mapTiles = Promise.all(t.map(async d => {
         d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
         return d;
       }))
-    return mapTiles
-  }
- const sortTileData = ti => {
-    const dataArray = []
-    ti.forEach(function(tile) {
-          let obj = {}
-          obj.data = zenArray(tile)
-          obj.coords = `tile-${tile.x}-${tile.y}-${tile.z}`
-          dataArray.push(obj)
+      return mapTiles
+    }
+    const sortTileData = ti => {
+      const dataArray = []
+      ti.forEach(function(tile) {
+        let obj = {}
+        obj.data = zenArray(tile)
+        obj.coords = `tile-${tile.x}-${tile.y}-${tile.z}`
+        dataArray.push(obj)
+      })
+      return dataArray;
+    }
+    //draw map
+    const drawTiles = ti => {
+      svg.selectAll('.tile').remove()
+      ti.forEach(function(tile) {
+        //svg.selectAll('.tile').remove()
+        svg.select('#tileWrap').append('g').attr('id', tile.coords).attr('class', 'tile').selectAll('path')
+          .data(tile.data)
+          .enter().append("path")
+          .attr("d", path)
+          .attr("class", function(d) { return getClass(d) })
+          .exit();
+      })
+      return ti;
+    }
+    // rendering our svg in the background every time we re-render
+    // todo: deal with computedStyle
+    const makeSVG = tiles => {
+      const styles = new Set()
+      const cssArray = []
+      let copySVG = document.createElement('svg')
+      tiles.forEach(tile => {
+        copySVG.insertAdjacentHTML('afterbegin', `<g id=${tile.coords} class="tile"></g>`)
+        let paths = tile.data.map(t => {
+          if (path(t) === null) return null;
+
+          styles.add(getClass(t))
+          return `<path class=${getClass(t)} d=${path(t)}></path>`
         })
-     return dataArray;
- }
-  //draw map
-  const drawTiles = ti => {
-        svg.selectAll('.tile').remove()
-        ti.forEach(function(tile) {
-          //svg.selectAll('.tile').remove()
-          svg.select('#tileWrap').append('g').attr('id', tile.coords).attr('class','tile').selectAll('path')
-            .data(tile.data)
-            .enter().append("path")
-            .attr("d", path)
-            .attr("class", function(d) { return getClass(d) })
-            .exit();
-        })   
-        return ti;
-  }
-  // rendering our svg in the background every time we re-render
-  // todo: deal with computedStyle
-  const makeSVG = tiles => {
-    const styles = new Set()
-    const cssArray = []
-    let copySVG = document.createElement('svg')
-    tiles.map(tile => {
-      copySVG.insertAdjacentHTML('afterbegin', `<g id = ${tile.coords} class="tile"></g>`) 
-      let paths = tile.data.map(t => {
-          if (path(t) != null){
-            styles.add(getClass(t))
-            return `<path class= ${getClass(t)} d=${path(t)}></path>`
-          }
-        })
-      copySVG.querySelector(`#${tile.coords}`).insertAdjacentHTML('afterbegin', paths.join(' '))
-    })
-    styles.add('site')
-    styles.add('tile')
-    console.log(styles)
-    Array.from(styles).forEach(s => {
-      for( let i in document.styleSheets ){
-      if(document.styleSheets[i].cssRules) {
-        var rules = document.styleSheets[i].cssRules;
-        for (let r in rules) {
-          if (rules[r].selectorText){
-            if (rules[r].selectorText.includes(s)){
-            cssArray.push(rules[r].cssText)
+        copySVG.querySelector(`#${tile.coords}`).insertAdjacentHTML('afterbegin', paths.join(' '))
+      })
+
+      const outline = `<path class="site" d=${this.state.outline}></path>`
+      copySVG.insertAdjacentHTML('beforeend', outline);
+
+      styles.add('site')
+      styles.add('tile')
+
+      Array.from(styles).forEach(s => {
+        for (let i in document.styleSheets) {
+          if (document.styleSheets[i].cssRules) {
+            var rules = document.styleSheets[i].cssRules;
+            for (let r in rules) {
+              if (rules[r].selectorText) {
+                if (rules[r].selectorText.includes(s)) {
+                  cssArray.push(rules[r].cssText)
+                }
+              }
+
             }
           }
-         
         }
-      }
+      })
+
+      this.setState({ copySVG: copySVG.innerHTML })
+      this.setState({ styleSheet: cssArray.join("\n") })
+      return copySVG
     }
-    })
-  
-    console.log(cssArray)
-    this.setState({ copySVG: copySVG.innerHTML })
-    this.setState({ styleSheet: cssArray.join("\n")})
-    return copySVG
-  }
 
-  const tileMaker = () => {
-     return tilePromise(getTiles()).then(t => {
-      drawTiles(sortTileData(t))
-      makeSVG(sortTileData(t))
-      svg.selectAll('.tile').attr('transform','')
-    })
-  }
+    const tileMaker = () => {
+      return tilePromise(getTiles()).then(t => {
+        drawTiles(sortTileData(t))
+        makeSVG(sortTileData(t))
+        svg.selectAll('.tile').attr('transform', '')
+      })
+    }
 
-  tileMaker()
-  this.setState({ outline: path(mapData) })
-  
+    tileMaker()
+    this.setState({ outline: path(mapData) })
+
     let rotate0, coords0;
-    const coords = () => projection.rotate(rotate0).invert([d3.event.x, d3.event.y]); 
+    const coords = () => projection.rotate(rotate0).invert([d3.event.x, d3.event.y]);
     svg
       .call(d3.drag()
         .on('start', () => {
@@ -204,9 +207,7 @@ class Map extends Component {
           svg.selectAll('.tile').attr('transform', `translate (${d3.event.x-d3.event.subject.x}, ${d3.event.y-d3.event.subject.y})`)
           this.setState({ outline: path(mapData) })
         })
-        .on('end', () => {
-           tileMaker()
-        })
+        .on('end', tileMaker)
       )
     const zoomies = () => {
       const { x, y, k } = d3.event.transform;
@@ -220,21 +221,21 @@ class Map extends Component {
           newPolygon()
         );
 
-      if (projection.scale() === -0 ){
+      if (projection.scale() === -0) {
         projection
-        .fitExtent(
-          [
-            [(width * .05) + x, (height * .05) + y],
-            [width - (width * .05) + x, height - (height * .05) + y]
-          ],
-          mapData
-        )
+          .fitExtent(
+            [
+              [(width * .05) + x, (height * .05) + y],
+              [width - (width * .05) + x, height - (height * .05) + y]
+            ],
+            mapData
+          )
       }
-      
+
       this.setState({ outline: path(mapData) })
     }
     const zoom = d3.zoom()
-      .scaleExtent([0.2,2]) //semi-arbitrary, basically the limits of where the map doesn't totally fuck up and break
+      .scaleExtent([0.2, 2]) //semi-arbitrary, basically the limits of where the map doesn't totally fuck up and break
       .on("zoom", zoomies)
       .on("end", tileMaker)
     svg.call(zoom)
@@ -245,7 +246,7 @@ class Map extends Component {
         kind += '_boundary';
       return `${kind}`;
     }
-    
+
     const zenArray = t => {
       let features = [];
       const layers = ['water', 'landuse', 'roads', 'buildings'];
@@ -271,42 +272,39 @@ class Map extends Component {
         0
       ));
     }
-}
-   
+  }
+
   render() {
-    const { tiles = [], outline, copySVG, styleSheet } = this.state;
+    const { outline, copySVG, styleSheet } = this.state;
     const { width, height } = this.props.mapSettings;
 
     const download = () => {
-        const svgText = `<svg xmlns="http://www.w3.org/2000/svg"><style type="text/css">${styleSheet}</style><svg>${ copySVG }</svg></svg>`;
-        const blob = new Blob([svgText], {type: 'text/xml'});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a')
-        link.setAttribute('href', url)
-        link.setAttribute('download', 'map.svg')
-        link.click()
+      const svgText = `<svg xmlns="http://www.w3.org/2000/svg"><style type="text/css">${styleSheet}</style>${ copySVG }</svg>`;
+      const blob = new Blob([svgText], { type: 'text/xml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a')
+      link.setAttribute('href', url)
+      link.setAttribute('download', 'map.svg')
+      link.click()
     }
-    
+
 
     return (
       <div>
-      <svg
-        width={ width } height={ height}
-        ref="svg"
-        style={{ margin: "20px" }}
-      >
-      <g id = "tileWrap">
-      </g>
-        <path className="site" d={outline} id="site" ref="outline"/>
-      </svg>
-      <div style={{ margin: "10px"}}>
-      <Button type="primary"
-      onClick={() => download()}
-      >
-          Download SVG
-        </Button>
-      </div>
+        <svg
+          width={ width } height={ height}
+          ref="svg"
+          style={{ margin: "20px", border: "1px solid #ccc" }}
+        >
+          <g id="tileWrap" />
+          <path className="site" d={outline} ref="outline"/>
+        </svg>
+        <div style={{ margin: "10px" }}>
+          <Button type="primary" onClick={download}>
+            Download SVG
+          </Button>
         </div>
+      </div>
     );
   }
 }
