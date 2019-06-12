@@ -1,11 +1,15 @@
 import React, { Component } from "react";
 
-import { Select, Button, InputNumber } from "antd";
-const Option = Select.Option;
+import { Button, InputNumber, Select } from "antd";
+
+const { Option } = Select;
 
 class Params extends Component {
   state = {};
   componentDidMount() {
+
+    this.setState({ projections: ["mercator","orthographic","azimuthalEqualArea","azimuthalEquidistant","conicEqualArea","conicEquidistant","equirectangular"]}) 
+
     this.setState({ mapSettings: this.props.mapSettings });
   }
   updateSetting = (key, value) => {
@@ -29,39 +33,35 @@ class Params extends Component {
     this.setState({ mapSettings });
   }
   render() {
-    if (!this.state.mapSettings) return (null);
+    if (!this.state.mapSettings || !this.props.features.length) return (null);
 
-    const features = this.props.data;
-    const keys = [];
-    features.forEach(function(f) {
-      const fprops = Object.keys(f.properties);
-      fprops.forEach(fp => keys.push(fp));
-    });
-    const dedupe = [...new Set(keys)];
-
-    const { width, height } = this.state.mapSettings;
-
+    const { width, height, proj } = this.state.mapSettings;
+    const { projections = []} = this.state;
     return (
-      <div>
-        <Select name="thisID" style={{ width: 120 }}>
-          {dedupe.map((k, i) => (
-            <Option value={k} key={`option${i}`}>
-              {k}
-            </Option>
-          ))}
-        </Select>
+      <div className="params">
         <span>
-          <InputNumber value={width} 
+          <span>Width:</span>
+          <InputNumber
+            style={{ margin: "0 10px" }}
+            value={width} 
             onChange={e => this.updateSetting("width", e)}
           />
-          <InputNumber value={height} 
+          <span>Height:</span>
+          <InputNumber
+            style={{ margin: "0 10px" }}
+            value={height} 
             onChange={e => this.updateSetting("height", e)}
           />
         </span>
+         <Select defaultValue="mercator" style={{ width: 120 }} onChange={p =>this.updateSetting("proj", p)}>
+            {projections.map(p => {
+            return <Option value = {p}>{p}</Option>
+          })}
+        </Select>
         <Button type="primary" 
           onClick={() => this.props.updateSettings(this.state.mapSettings)}
         >
-          Set Parameters
+          Update Maps
         </Button>
       </div>
     );

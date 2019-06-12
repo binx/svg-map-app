@@ -8,7 +8,8 @@ class App extends Component {
   state = {
     mapSettings: {
       width: 600,
-      height: 600
+      height: 600, 
+      proj: "mercator"
     }
   };
   updateSettings = (mapSettings) => {
@@ -19,14 +20,17 @@ class App extends Component {
 
     return (
       <div>
-        <UploadForm
-          setFeatures={features => this.setState({ features })}
-        />
-        <Params
-          data={features}
-          mapSettings={mapSettings}
-          updateSettings={this.updateSettings}
-        />
+        <div className="settings">
+          <UploadForm
+            features={features}
+            setFeatures={features => this.setState({ features })}
+          />
+          <Params
+            features={features}
+            mapSettings={mapSettings}
+            updateSettings={this.updateSettings}
+          />
+        </div>
         <div style={{ display: "flex", flexWrap: "wrap" }}>
           { features.map((f,i) => {
             return <Map data={f} key={`map${i}`} mapSettings={mapSettings} />
