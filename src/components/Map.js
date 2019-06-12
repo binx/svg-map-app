@@ -3,7 +3,6 @@ import centroid from "@turf/centroid";
 import { Button } from "antd";
 import * as d3 from "d3";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
-
 class Map extends Component {
   state = {};
   componentDidMount() {
@@ -11,27 +10,40 @@ class Map extends Component {
     // and we have data to work with
     this.createMapDisplay();
   }
+  // is there a less sloppy way to do this? 
   componentDidUpdate(prevProps) {
     if (JSON.stringify(this.props.mapSettings) !== JSON.stringify(prevProps.mapSettings))
       this.createMapDisplay();
   }
   createMapDisplay = () => {
     const mapData = this.props.data;
-    const { width, height } = this.props.mapSettings;
+    const { width, height, proj} = this.props.mapSettings;
 
     const mapCentroid = centroid(mapData.geometry);
 
     const svg = d3.select(this.refs.svg)
 
-    const projection = d3.geoOrthographic()
-      .center(mapCentroid.geometry.coordinates)
-      .translate([width / 4, height / 4]) //I honestly don't know why this works
-      .rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]])
-      .clipExtent([
-        [0, 0],
-        [width, height]
-      ])
-      .fitExtent(
+    const projections = {
+
+    "mercator": d3.geoMercator().translate([0, 0]).center(mapCentroid.geometry.coordinates).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
+
+    "orthographic" : d3.geoOrthographic().center(mapCentroid.geometry.coordinates).translate([width/4,height/4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width,height]]).fitExtent([[width * .05, height * .05],[width-(width * .05), height-(height * .05)]],mapData),
+
+    "azimuthalEqualArea":  d3.geoAzimuthalEqualArea().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
+
+    "azimuthalEquidistant": d3.geoAzimuthalEquidistant().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
+
+    "conicEqualArea": d3.geoConicEqualArea().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
+
+    "conicEquidistant": d3.geoConicEquidistant().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
+
+    "equirectangular": d3.geoEquirectangular().translate([0, 0]).center(mapCentroid.geometry.coordinates).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData)
+
+
+    }
+    const projection = projections[proj]
+
+      projection.fitExtent(
         [
           [width * .05, height * .05],
           [width - (width * .05), height - (height * .05)]
@@ -139,22 +151,31 @@ class Map extends Component {
     // todo: deal with computedStyle
     const makeSVG = tiles => {
       const styles = new Set()
+      const layers = {}
       const cssArray = []
       let copySVG = document.createElement('svg')
+      copySVG.width=width
+      copySVG.height=height
+      copySVG.className="tile"
       tiles.forEach(tile => {
-        copySVG.insertAdjacentHTML('afterbegin', `<g id=${tile.coords} class="tile"></g>`)
-        let paths = tile.data.map(t => {
+        // copySVG.insertAdjacentHTML('afterbegin', `<g id=${tile.coords} class="tile"></g>`)
+       tile.data.map(t => {
           if (path(t) === null) return null;
-
-          styles.add(getClass(t))
-          return `<path class=${getClass(t)} d=${path(t)}></path>`
+          if (!styles.has(getClass(t))){
+            layers[getClass(t)] = []
+            layers[getClass(t)].push(`<path class="${getClass(t)}" d=${path(t)}></path>`)
+            styles.add(getClass(t))
+          } else {
+            layers[getClass(t)].push(`<path class="${getClass(t)}" d=${path(t)}></path>`)
+          }
         })
-        copySVG.querySelector(`#${tile.coords}`).insertAdjacentHTML('afterbegin', paths.join(' '))
       })
-
+      Object.keys(layers).forEach(l =>{
+        copySVG.insertAdjacentHTML('afterbegin', `<g id=${l} class="tile">${layers[l].join(' ')}</g>`)
+      })
       const outline = `<path class="site" d=${this.state.outline}></path>`
       copySVG.insertAdjacentHTML('beforeend', outline);
-
+  
       styles.add('site')
       styles.add('tile')
 
@@ -235,7 +256,7 @@ class Map extends Component {
       this.setState({ outline: path(mapData) })
     }
     const zoom = d3.zoom()
-      .scaleExtent([0.2, 2]) //semi-arbitrary, basically the limits of where the map doesn't totally fuck up and break
+      .scaleExtent([0.1, 2]) //semi-arbitrary, basically the limits of where the map doesn't totally fuck up and break
       .on("zoom", zoomies)
       .on("end", tileMaker)
     svg.call(zoom)

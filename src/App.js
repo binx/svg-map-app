@@ -8,7 +8,8 @@ class App extends Component {
   state = {
     mapSettings: {
       width: 600,
-      height: 600
+      height: 600, 
+      proj: "mercator"
     }
   };
   updateSettings = (mapSettings) => {

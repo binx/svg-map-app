@@ -1,10 +1,15 @@
 import React, { Component } from "react";
 
-import { Button, InputNumber } from "antd";
+import { Button, InputNumber, Select } from "antd";
+
+const { Option } = Select;
 
 class Params extends Component {
   state = {};
   componentDidMount() {
+
+    this.setState({ projections: ["mercator","orthographic","azimuthalEqualArea","azimuthalEquidistant","conicEqualArea","conicEquidistant","equirectangular"]}) 
+
     this.setState({ mapSettings: this.props.mapSettings });
   }
   updateSetting = (key, value) => {
@@ -30,8 +35,8 @@ class Params extends Component {
   render() {
     if (!this.state.mapSettings || !this.props.features.length) return (null);
 
-    const { width, height } = this.state.mapSettings;
-
+    const { width, height, proj } = this.state.mapSettings;
+    const { projections = []} = this.state;
     return (
       <div className="params">
         <span>
@@ -48,10 +53,15 @@ class Params extends Component {
             onChange={e => this.updateSetting("height", e)}
           />
         </span>
+         <Select defaultValue="mercator" style={{ width: 120 }} onChange={p =>this.updateSetting("proj", p)}>
+            {projections.map(p => {
+            return <Option value = {p}>{p}</Option>
+          })}
+        </Select>
         <Button type="primary" 
           onClick={() => this.props.updateSettings(this.state.mapSettings)}
         >
-          Set Map Size
+          Update Maps
         </Button>
       </div>
     );
