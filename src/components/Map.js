@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import centroid from "@turf/centroid";
+import circle from "@turf/circle"
 import { Button } from "antd";
 import * as d3 from "d3";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
@@ -42,7 +43,17 @@ class Map extends Component {
 
     }
     const projection = projections[proj]
+    if (mapData.geometry.type == "Point"){
+      const pointCircle = circle(mapData.geometry.coordinates, 5)
+      projection.fitExtent(
+       [
+          [width * .05, height * .05],
+          [width - (width * .05), height - (height * .05)]
+        ],
+        pointCircle
+      )
 
+    } else{
       projection.fitExtent(
         [
           [width * .05, height * .05],
@@ -50,8 +61,10 @@ class Map extends Component {
         ],
         mapData
       )
+    }
+     
 
-    const path = d3.geoPath(projection)
+    const path = d3.geoPath(projection) 
 
     // for zooms
     const newPolygon = () => {
