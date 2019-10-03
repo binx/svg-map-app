@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 
-import { Upload, Button, Icon, Input } from "antd";
+import { Input } from "antd";
 
 class UploadForm extends Component {
 
@@ -10,7 +10,9 @@ class UploadForm extends Component {
 
     const handleFileRead = (e) => {
         const content = JSON.parse(fileReader.result);
+        const fullmap = content;
         const features = content.features;
+        this.props.setContent(content);
         this.props.setFeatures(features);
     };
 

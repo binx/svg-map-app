@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 
-import { Button, InputNumber, Select } from "antd";
+import { Button, InputNumber, Select, Checkbox } from "antd";
 
 const { Option } = Select;
 
@@ -58,6 +58,9 @@ class Params extends Component {
             return <Option value = {p}>{p}</Option>
           })}
         </Select>
+         <Checkbox defaultChecked={true} onChange={e => this.updateSetting("onemap", e.target.checked)}>Map of All Features</Checkbox>
+
+         <Checkbox onChange={e => this.updateSetting("manymaps", e.target.checked)}>Map Each Feature</Checkbox>
         <Button type="primary" 
           onClick={() => this.props.updateSettings(this.state.mapSettings)}
         >

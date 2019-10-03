@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import circle from "@turf/circle";
-import center from "@turf/center"
+import centroid from "@turf/centroid"
 import { Button } from "antd";
 import * as d3 from "d3";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
-class Map extends Component { 
+class ManyMaps extends Component {
   state = {};
   componentDidMount() {
     // once our file loads, this component is mounted 
@@ -20,7 +20,7 @@ class Map extends Component {
     const mapData = this.props.data;
     const { width, height, proj} = this.props.mapSettings;
 
-    const mapCentroid = center(mapData);
+    const mapCentroid = centroid(mapData.geometry);
 
     const svg = d3.select(this.refs.svg)
 
@@ -43,25 +43,25 @@ class Map extends Component {
 
     }
     const projection = projections[proj]
-    // if (mapData.features.geometry.type == "Point"){
-    //   const pointCircle = circle(mapData.geometry.coordinates, 5)
-    //   projection.fitExtent(
-    //    [
-    //       [width * .05, height * .05],
-    //       [width - (width * .05), height - (height * .05)]
-    //     ],
-    //     pointCircle
-    //   )
+    if (mapData.geometry.type == "Point"){
+      const pointCircle = circle(mapData.geometry.coordinates, 5)
+      projection.fitExtent(
+       [
+          [width * .05, height * .05],
+          [width - (width * .05), height - (height * .05)]
+        ],
+        pointCircle
+      )
 
-    // } else{
-    //   projection.fitExtent(
-    //     [
-    //       [width * .05, height * .05],
-    //       [width - (width * .05), height - (height * .05)]
-    //     ],
-    //     mapData
-    //   )
-    // }
+    } else{
+      projection.fitExtent(
+        [
+          [width * .05, height * .05],
+          [width - (width * .05), height - (height * .05)]
+        ],
+        mapData
+      )
+    }
      
 
     const path = d3.geoPath(projection) 
@@ -101,7 +101,7 @@ class Map extends Component {
       // this is suboptimal
       let upperbound;
       let lowerbound;
-      if (z < 5) {
+      if (z <= 4) {
         upperbound = [-180, 90]
         lowerbound = [180, -180]
       } else {
@@ -345,4 +345,6 @@ class Map extends Component {
     );
   }
 }
-export default Map;
+
+
+export default ManyMaps;
