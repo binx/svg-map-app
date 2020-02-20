@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import circle from "@turf/circle";
 import center from "@turf/center"
 import { Button } from "antd";
 import * as d3 from "d3";
@@ -26,7 +25,7 @@ class Map extends Component {
 
     const projections = {
 
-    "mercator": d3.geoMercator().translate([0, 0]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
+    "mercator": d3.geoMercator().translate([0, 0]).fitExtent([[width * .005, height * .005],[width - (width * .005), height - (height * .005)]],mapData),
 
     "orthographic" : d3.geoOrthographic().center(mapCentroid.geometry.coordinates).translate([width/4,height/4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width,height]]).fitExtent([[width * .05, height * .05],[width-(width * .05), height-(height * .05)]],mapData),
 
@@ -43,26 +42,6 @@ class Map extends Component {
 
     }
     const projection = projections[proj]
-    // if (mapData.features.geometry.type == "Point"){
-    //   const pointCircle = circle(mapData.geometry.coordinates, 5)
-    //   projection.fitExtent(
-    //    [
-    //       [width * .05, height * .05],
-    //       [width - (width * .05), height - (height * .05)]
-    //     ],
-    //     pointCircle
-    //   )
-
-    // } else{
-    //   projection.fitExtent(
-    //     [
-    //       [width * .05, height * .05],
-    //       [width - (width * .05), height - (height * .05)]
-    //     ],
-    //     mapData
-    //   )
-    // }
-     
 
     const path = d3.geoPath(projection) 
 
@@ -151,7 +130,9 @@ class Map extends Component {
       svg.selectAll('.tile').remove()
       ti.forEach(function(tile) {
         //svg.selectAll('.tile').remove()
-        svg.select('#tileWrap').append('g').attr('id', tile.coords).attr('class', 'tile').selectAll('path')
+        svg.select('#tileWrap').append('g').attr('id', tile.coords)
+        .attr('class', 'tile')
+        .selectAll('path')
           .data(tile.data)
           .enter().append("path")
           .attr("d", path)
@@ -164,7 +145,9 @@ class Map extends Component {
     // todo: deal with computedStyle
     const makeSVG = tiles => {
       const styles = new Set()
-      const layers = {}
+      const layers = {
+            // add four groups 
+      }
       const cssArray = []
       let copySVG = document.createElement('svg')
       copySVG.width=width
@@ -186,8 +169,9 @@ class Map extends Component {
       Object.keys(layers).forEach(l =>{
         copySVG.insertAdjacentHTML('afterbegin', `<g id=${l} class="tile">${layers[l].join(' ')}</g>`)
       })
-      const outline = `<path class="site" d=${this.state.outline}></path>`
-      copySVG.insertAdjacentHTML('beforeend', outline);
+      const sitelayer = `<g id ="site"><path class="site" d="${path(mapData)}"></path></g>` 
+
+      copySVG.insertAdjacentHTML('beforeend', sitelayer);
   
       styles.add('site')
       styles.add('tile')
@@ -279,8 +263,8 @@ class Map extends Component {
     const getClass = d => {
       let kind = d.properties.kind || '';
       if (d.properties.boundary)
-        kind += '_boundary';
-      return `${kind}`;
+        kind += 'boundary';
+      return `${kind.replace('_','')}`;
     }
 
     const zenArray = t => {
@@ -334,7 +318,9 @@ class Map extends Component {
           style={{ margin: "20px", border: "1px solid #ccc" }}
         >
           <g id="tileWrap" />
-          <path className="site" d={outline} ref="outline"/>
+          <g id="site">
+          <path className="site" d={outline} ref="outline" id="site"/>
+          </g>
         </svg>
         <div style={{ margin: "10px" }}>
           <Button type="primary" onClick={download}>

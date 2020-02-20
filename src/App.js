@@ -10,7 +10,7 @@ class App extends Component {
     mapSettings: {
       width: 600,
       height: 600, 
-      proj: "mercator",
+      proj: "orthographic",
       onemap: true,
       manymaps:false
     }
@@ -38,7 +38,7 @@ class App extends Component {
             updateSettings={this.updateSettings}
           />
         </div>
-       {content.type == "FeatureCollection" &&
+       {content.type &&
        <div>
        {mapSettings.onemap == true && 
         <Map data={content} mapSettings={mapSettings}/>

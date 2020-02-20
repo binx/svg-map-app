@@ -11,7 +11,7 @@
   fill: #9DD9D2;
 }
 
-.buildings {
+#building, .tile .building {
   fill: gray;
 }
 
@@ -53,7 +53,7 @@
   fill: white;
 }
 
-.military {
+#military, .military {
   fill: pink;
   fill-opacity: 0.2;
 }
@@ -65,7 +65,7 @@
   stroke-linecap: round;
 }
 
-.tile .water-layer,
+#waterlayer, #river, #stream, #canal .tile .waterlayer,
 .tile .river,
 .tile .stream,
 .tile .canal {
@@ -74,60 +74,60 @@
   stroke-width: 1.5px;
 }
 
-.tile .water,
+#water, #ocean, .tile .water,
 .tile .ocean {
   fill: #9DD9D2;
   stroke: none;
 }
 
-.tile .riverbank {
+#riverbank, .tile .riverbank {
   fill: #9DD9D2;
 }
 
-.tile .water_boundary,
-.tile .ocean_boundary,
-.tile .riverbank_boundary {
+#waterboundary, #oceanboundary, #riverbankboundary,.tile .waterboundary,
+.tile .oceanboundary,
+.tile .riverbankboundary {
   fill: none;
   stroke: #93cbc4;
   stroke-width: 0.5px;
 }
 
-.tile .major_road {
+#majorroad, .tile .majorroad {
   stroke: #fb7b7a;
   stroke-width: 1px;
 }
 
-.tile .minor_road {
+#minorroad.tile .minorroad {
   stroke: #999;
   stroke-width: 0.5px;
 }
 
-.tile .highway {
+#highway, .tile .highway {
   stroke: #FA4A48;
   stroke-width: 1.5px;
 }
 
-.tile .buildings-layer {
+#buildings-layer, .tile .buildings-layer {
   stroke: #987284;
   stroke-width: 0.15px;
 }
 
-.tile .park,
-.tile .nature_reserve,
+#park, #naturereserve, #wood, #protectedland,.tile .park,
+.tile .naturereserve,
 .tile .wood,
-.tile .protected_land {
+.tile .protectedland {
   fill: #88D18A;
   stroke: #88D18A;
   stroke-width: 0.5px;
 }
 
-.tile .pier {
+#pier, .tile .pier {
   fill: #fff;
   stroke: #fff;
   stroke-width: 0.5px;
 }
 
-.tile .rail {
+#rail, .tile .rail {
   stroke: #503D3F;
   stroke-width: 0.5px;
 }

@@ -279,8 +279,8 @@ class ManyMaps extends Component {
     const getClass = d => {
       let kind = d.properties.kind || '';
       if (d.properties.boundary)
-        kind += '_boundary';
-      return `${kind}`;
+        kind += 'boundary';
+      return `${kind.replace('_','')}`;
     }
 
     const zenArray = t => {

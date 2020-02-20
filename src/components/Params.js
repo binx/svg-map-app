@@ -35,7 +35,7 @@ class Params extends Component {
   render() {
     if (!this.state.mapSettings || !this.props.features.length) return (null);
 
-    const { width, height, proj } = this.state.mapSettings;
+    const { width, height } = this.state.mapSettings;
     const { projections = []} = this.state;
     return (
       <div className="params">
