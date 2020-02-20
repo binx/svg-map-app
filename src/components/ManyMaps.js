@@ -186,7 +186,7 @@ class ManyMaps extends Component {
       Object.keys(layers).forEach(l =>{
         copySVG.insertAdjacentHTML('afterbegin', `<g id=${l} class="tile">${layers[l].join(' ')}</g>`)
       })
-      const outline = `<path class="site" d=${this.state.outline}></path>`
+      const outline = `<path class="site" d="${this.state.outline}"></path>`
       copySVG.insertAdjacentHTML('beforeend', outline);
   
       styles.add('site')
