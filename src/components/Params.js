@@ -8,7 +8,7 @@ class Params extends Component {
   state = {};
   componentDidMount() {
 
-    this.setState({ projections: ["orthographic","azimuthalEqualArea","azimuthalEquidistant","conicEqualArea","conicEquidistant","equirectangular","mercator"]}) 
+    this.setState({ projections: ["orthographic","azimuthalEqualArea","azimuthalEquidistant","conicEqualArea","conicEquidistant","equirectangular"]}) 
 
     this.setState({ mapSettings: this.props.mapSettings });
   }
@@ -53,7 +53,7 @@ class Params extends Component {
             onChange={e => this.updateSetting("height", e)}
           />
         </span>
-         <Select defaultValue="mercator" style={{ width: 120 }} onChange={p =>this.updateSetting("proj", p)}>
+         <Select defaultValue="orthographic" style={{ width: 120 }} onChange={p =>this.updateSetting("proj", p)}>
             {projections.map(p => {
             return <Option value = {p}>{p}</Option>
           })}

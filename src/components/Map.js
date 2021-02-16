@@ -25,9 +25,7 @@ class Map extends Component {
 
     const projections = {
 
-    "mercator": d3.geoMercator().translate([0, 0]).fitExtent([[width * .005, height * .005],[width - (width * .005), height - (height * .005)]],mapData),
-
-    "orthographic" : d3.geoOrthographic().center(mapCentroid.geometry.coordinates).translate([width/4,height/4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width,height]]).fitExtent([[width * .05, height * .05],[width-(width * .05), height-(height * .05)]],mapData),
+    "orthographic" : d3.geoOrthographic().center(mapCentroid.geometry.coordinates).translate([width/4,height/4]) .rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width,height]]).fitExtent([[width * .05, height * .05],[width-(width * .05), height-(height * .05)]],mapData),
 
     "azimuthalEqualArea":  d3.geoAzimuthalEqualArea().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
 
@@ -39,39 +37,24 @@ class Map extends Component {
 
     "equirectangular": d3.geoEquirectangular().translate([0, 0]).center(mapCentroid.geometry.coordinates).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData)
 
-
     }
     const projection = projections[proj]
 
     const path = d3.geoPath(projection) 
 
-    // for zooms
-    const newPolygon = () => {
-      let n = projection.invert([0, 0])
-      let e = projection.invert([width, 0])
-      let s = projection.invert([width, height])
-      let w = projection.invert([0, height])
-      let polygon = {
-        "type": "FeatureCollection",
-        "features": [{
-          "type": "Feature",
-          "properties": {},
-          "geometry": {
-            "type": "Polygon",
-            "coordinates": [
-              [n,
-                e,
-                s,
-                w,
-                n
-              ]
-            ]
-          }
-        }]
-      }
-      return polygon;
+    const z = (0 | Math.log(projection.scale()) / Math.LN2) - 5
+    // projection.scale(Math.pow(2, 8+z) / (2 * Math.PI))
+    // console.log(projection.scale())
+    
+    const sphericalProj = ["orthographic","azimuthalEqualArea","azimuthalEquidistant"]
+    
+    //
+
+    if (sphericalProj.includes(proj)){
+
+    } else {
+
     }
-    // there wasn't actually a good reason to break these into smaller functions, I thought that there was but by the time I realized it was unnecessary it was too late
 
     //generate quadtile array
     const getTiles = () => {
@@ -115,32 +98,22 @@ class Map extends Component {
       }))
       return mapTiles
     }
+    const rawdata = []
     const sortTileData = ti => {
-      const dataArray = []
-      ti.forEach(function(tile) {
-        let obj = {}
-        obj.data = zenArray(tile)
-        obj.coords = `tile-${tile.x}-${tile.y}-${tile.z}`
-        dataArray.push(obj)
+      const tiles = ti.map(tile => {
+        const mapTile = zenArray(tile).map(d => ({
+          d: path(d), 
+          class: getClass(d),
+          data: d
+        }))
+        rawdata.push(mapTile.data)
+        return mapTile.flat(); 
       })
-      return dataArray;
+      this.setState({maptiles: tiles.flat()})
+      return tiles.flat();
+
     }
-    //draw map
-    const drawTiles = ti => {
-      svg.selectAll('.tile').remove()
-      ti.forEach(function(tile) {
-        //svg.selectAll('.tile').remove()
-        svg.select('#tileWrap').append('g').attr('id', tile.coords)
-        .attr('class', 'tile')
-        .selectAll('path')
-          .data(tile.data)
-          .enter().append("path")
-          .attr("d", path)
-          .attr("class", function(d) { return getClass(d) })
-          .exit();
-      })
-      return ti;
-    }
+
     // rendering our svg in the background every time we re-render
     // todo: deal with computedStyle
     const makeSVG = tiles => {
@@ -153,19 +126,29 @@ class Map extends Component {
       copySVG.width=width
       copySVG.height=height
       copySVG.className="tile"
-      tiles.forEach(tile => {
-        // copySVG.insertAdjacentHTML('afterbegin', `<g id=${tile.coords} class="tile"></g>`)
-       tile.data.map(t => {
-          if (path(t) === null) return null;
-          if (!styles.has(getClass(t))){
-            layers[getClass(t)] = []
-            layers[getClass(t)].push(`<path class="${getClass(t)}" d=${path(t)}></path>`)
-            styles.add(getClass(t))
-          } else {
-            layers[getClass(t)].push(`<path class="${getClass(t)}" d=${path(t)}></path>`)
-          }
-        })
+      tiles.map(t => {
+        if (t.d === null) return null;
+        if (!styles.has(t.class)){
+          layers[t.class] = []
+          layers[t.class].push(`<path class="${t.class}" d=${t.d}></path>`)
+          styles.add(t.class)
+        } else{
+          layers[t.class].push(`<path class="${t.class}" d=${t.d}></path>`)
+        }
       })
+      // tiles.forEach(tile => {
+      //   // copySVG.insertAdjacentHTML('afterbegin', `<g id=${tile.coords} class="tile"></g>`)
+      //  tile.data.map(t => {
+      //     if (path(t) === null) return null;
+      //     if (!styles.has(getClass(t))){
+      //       layers[getClass(t)] = []
+      //       layers[getClass(t)].push(`<path class="${getClass(t)}" d=${path(t)}></path>`)
+      //       styles.add(getClass(t))
+      //     } else {
+      //       layers[getClass(t)].push(`<path class="${getClass(t)}" d=${path(t)}></path>`)
+      //     }
+      //   })
+      // })
       Object.keys(layers).forEach(l =>{
         copySVG.insertAdjacentHTML('afterbegin', `<g id=${l} class="tile">${layers[l].join(' ')}</g>`)
       })
@@ -197,17 +180,20 @@ class Map extends Component {
       return copySVG
     }
 
+
     const tileMaker = () => {
       return tilePromise(getTiles()).then(t => {
-        drawTiles(sortTileData(t))
+        console.log(sortTileData(t))
+        sortTileData(t)
+        // drawTiles(sortTileData(t))
         makeSVG(sortTileData(t))
-        svg.selectAll('.tile').attr('transform', '')
       })
     }
 
     tileMaker()
     this.setState({ outline: path(mapData) })
 
+    
     let rotate0, coords0;
     const coords = () => projection.rotate(rotate0).invert([d3.event.x, d3.event.y]);
     svg
@@ -222,43 +208,11 @@ class Map extends Component {
             rotate0[0] + coords1[0] - coords0[0],
             rotate0[1] + coords1[1] - coords0[1],
           ])
-          svg.selectAll('.tile').attr('transform', `translate (${d3.event.x-d3.event.subject.x}, ${d3.event.y-d3.event.subject.y})`)
           this.setState({ outline: path(mapData) })
+          
         })
         .on('end', tileMaker)
       )
-    const zoomies = () => {
-      const { x, y, k } = d3.event.transform;
-      svg.selectAll('.tile').attr('transform', d3.event.transform)
-      projection
-        .fitExtent(
-          [
-            [(width * k * .05) + x, (height * k * .05) + y],
-            [width * k - (width * k * .05) + x, height * k - (height * k * .05) + y]
-          ],
-          newPolygon()
-        );
-      console.log(k)
-
-      if (projection.scale() === -0) {
-        projection
-          .fitExtent(
-            [
-              [(width * .05) + x, (height * .05) + y],
-              [width - (width * .05) + x, height - (height * .05) + y]
-            ],
-            mapData
-          )
-      }
-
-      this.setState({ outline: path(mapData) })
-    }
-    //[0.1, 2]
-    const zoom = d3.zoom()
-      .scaleExtent([0.1,3])
-      .on("zoom", zoomies)
-      .on("end", tileMaker)
-    svg.call(zoom)
 
     const getClass = d => {
       let kind = d.properties.kind || '';
@@ -269,19 +223,15 @@ class Map extends Component {
 
     const zenArray = t => {
       let features = [];
-      const layers = ['water', 'landuse', 'roads', 'buildings'];
+      const layers = ['water', 'earth','landuse', 'roads', 'buildings',];
       layers.forEach(function(layer) {
         if (t.data[layer]) {
           for (let i in t.data[layer].features) {
             // Don't include any label placement points
             if (t.data[layer].features[i].properties.label_placement) { continue }
 
-            // // Don't show large buildings at z13 or below.
-            // if(zoom <= 13 && layer == 'buildings') { continue }
-
-            // // Don't show small buildings at z14 or below.
-            // if(zoom <= 14 && layer == 'buildings' && data[layer].features[i].properties.area < 2000) { continue }
-            t.data[layer].features[i].group=layer
+             t.data[layer].features[i].group=layer
+             t.data[layer].features[i].class=getClass(t.data[layer].features[i])
 
             features.push(t.data[layer].features[i]);
           }
@@ -296,9 +246,8 @@ class Map extends Component {
   }
 
   render() {
-    const { outline, copySVG, styleSheet } = this.state;
+    const { maptiles=[], outline, copySVG, styleSheet } = this.state;
     const { width, height } = this.props.mapSettings;
-
     const download = () => {
       const svgText = `<svg xmlns="http://www.w3.org/2000/svg"><style type="text/css">${styleSheet}</style>${ copySVG }</svg>`;
       const blob = new Blob([svgText], { type: 'text/xml' });
@@ -312,13 +261,19 @@ class Map extends Component {
 
     return (
       <div>
+        
         <svg
           width={ width } height={ height}
           ref="svg"
           style={{ margin: "20px", border: "1px solid #ccc" }}
         >
-          <g id="tileWrap" />
-          <g id="site">
+          <g id="tiles">
+           {maptiles.map((g,i) => (
+           <g key={`group${i}`} className="tile">
+              <path key={`path${i}`} className={g.class} d={g.d} />
+           </g>))}
+          </g>
+          <g id="site"> 
           <path className="site" d={outline} ref="outline" id="site"/>
           </g>
         </svg>
