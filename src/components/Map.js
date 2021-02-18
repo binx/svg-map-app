@@ -3,6 +3,7 @@ import center from "@turf/center"
 import { Button } from "antd";
 import * as d3 from "d3";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
+import { thresholdFreedmanDiaconis } from 'd3';
 class Map extends Component { 
   state = {};
   componentDidMount() {
@@ -47,13 +48,12 @@ class Map extends Component {
     // console.log(projection.scale())
     
     const sphericalProj = ["orthographic","azimuthalEqualArea","azimuthalEquidistant"]
-    
-    //
 
     if (sphericalProj.includes(proj)){
 
+      this.setState({ sphere: path( ({type: "Sphere"})) })
     } else {
-
+      
     }
 
     //generate quadtile array
@@ -99,6 +99,7 @@ class Map extends Component {
       return mapTiles
     }
     const rawdata = []
+
     const sortTileData = ti => {
       const tiles = ti.map(tile => {
         const mapTile = zenArray(tile).map(d => ({
@@ -106,7 +107,7 @@ class Map extends Component {
           class: getClass(d),
           data: d
         }))
-        rawdata.push(mapTile.data)
+        rawdata.push(mapTile)
         return mapTile.flat(); 
       })
       this.setState({maptiles: tiles.flat()})
@@ -126,7 +127,11 @@ class Map extends Component {
       copySVG.width=width
       copySVG.height=height
       copySVG.className="tile"
-      tiles.map(t => {
+      const sphere = `<g id ="sphere" class="ocean"><path class="water" d="${path({type: "Sphere"})}"></path></g>` 
+
+      copySVG.insertAdjacentHTML('beforeend', sphere);
+
+      tiles.forEach(t => {
         if (t.d === null) return null;
         if (!styles.has(t.class)){
           layers[t.class] = []
@@ -136,6 +141,8 @@ class Map extends Component {
           layers[t.class].push(`<path class="${t.class}" d=${t.d}></path>`)
         }
       })
+      console.log(styles)
+      console.log(layers)
       // tiles.forEach(tile => {
       //   // copySVG.insertAdjacentHTML('afterbegin', `<g id=${tile.coords} class="tile"></g>`)
       //  tile.data.map(t => {
@@ -193,6 +200,9 @@ class Map extends Component {
     tileMaker()
     this.setState({ outline: path(mapData) })
 
+    const reDraw = () => {
+      this.setState({ maptiles: rawdata.flat().map(r =>({ class: r.class, d: path(r.data)}))})
+    }
     
     let rotate0, coords0;
     const coords = () => projection.rotate(rotate0).invert([d3.event.x, d3.event.y]);
@@ -209,10 +219,12 @@ class Map extends Component {
             rotate0[1] + coords1[1] - coords0[1],
           ])
           this.setState({ outline: path(mapData) })
+          reDraw()
           
         })
-        .on('end', tileMaker)
+        .on('end', reDraw)
       )
+
 
     const getClass = d => {
       let kind = d.properties.kind || '';
@@ -223,7 +235,7 @@ class Map extends Component {
 
     const zenArray = t => {
       let features = [];
-      const layers = ['water', 'earth','landuse', 'roads', 'buildings',];
+      const layers = [ 'earth', 'landuse', 'roads', 'buildings',];
       layers.forEach(function(layer) {
         if (t.data[layer]) {
           for (let i in t.data[layer].features) {
@@ -243,10 +255,20 @@ class Map extends Component {
         0
       ));
     }
+
+  //   <defs>
+  //   <path id="outline" d="${path(outline)}" />
+  //   <clipPath id="clip"><use xlink:href="${new URL("#outline", location)}"/></clipPath>
+  // </defs>
+  // <g clip-path="url(${new URL("#clip", location)})">
+  //   <use xlink:href="${new URL("#outline", location)}" fill="red" />
+  //   <path d="${path(graticule)}" stroke="#ccc" fill="none"></path>
+  //   <path d="${path(land)}"></path>
+  // </g>
   }
 
   render() {
-    const { maptiles=[], outline, copySVG, styleSheet } = this.state;
+    const { maptiles=[], outline, copySVG, styleSheet, sphere } = this.state;
     const { width, height } = this.props.mapSettings;
     const download = () => {
       const svgText = `<svg xmlns="http://www.w3.org/2000/svg"><style type="text/css">${styleSheet}</style>${ copySVG }</svg>`;
@@ -267,11 +289,12 @@ class Map extends Component {
           ref="svg"
           style={{ margin: "20px", border: "1px solid #ccc" }}
         >
-          <g id="tiles">
+          <g id = "sphere" class="ocean">
+            <path id = "sphere" d = { sphere }  class= "water"/> 
+          </g>
+          <g id="tiles" class="tile">
            {maptiles.map((g,i) => (
-           <g key={`group${i}`} className="tile">
-              <path key={`path${i}`} className={g.class} d={g.d} />
-           </g>))}
+              <path key={`path${i}`} className={g.class} d={g.d} />))}
           </g>
           <g id="site"> 
           <path className="site" d={outline} ref="outline" id="site"/>

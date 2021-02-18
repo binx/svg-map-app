@@ -128,7 +128,11 @@ class ManyMaps extends Component {
       copySVG.width=width
       copySVG.height=height
       copySVG.className="tile"
-      tiles.map(t => {
+      const sphere = `<g id ="sphere" class="ocean"><path class="water" d="${path({type: "Sphere"})}"></path></g>` 
+
+      copySVG.insertAdjacentHTML('beforeend', sphere);
+
+      tiles.forEach(t => {
         if (t.d === null) return null;
         if (!styles.has(t.class)){
           layers[t.class] = []
@@ -138,6 +142,8 @@ class ManyMaps extends Component {
           layers[t.class].push(`<path class="${t.class}" d=${t.d}></path>`)
         }
       })
+      console.log(styles)
+      console.log(layers)
       // tiles.forEach(tile => {
       //   // copySVG.insertAdjacentHTML('afterbegin', `<g id=${tile.coords} class="tile"></g>`)
       //  tile.data.map(t => {
@@ -182,7 +188,6 @@ class ManyMaps extends Component {
       return copySVG
     }
 
-
     const tileMaker = () => {
       return tilePromise(getTiles()).then(t => {
         console.log(sortTileData(t))
@@ -225,7 +230,7 @@ class ManyMaps extends Component {
 
     const zenArray = t => {
       let features = [];
-      const layers = ['water', 'earth','landuse', 'roads', 'buildings',];
+      const layers = ['earth', 'water','landuse', 'roads', 'buildings',];
       layers.forEach(function(layer) {
         if (t.data[layer]) {
           for (let i in t.data[layer].features) {

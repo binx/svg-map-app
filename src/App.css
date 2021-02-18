@@ -42,9 +42,9 @@
   fill: none;
 }
 
-#earth,
+#earth,.tile .earth,
 .earth {
-  fill: papayawhip;
+  fill: white;
   /*stroke: 0.5;
   stroke-color: #dfe6ea;*/
 }
