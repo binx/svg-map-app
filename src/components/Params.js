@@ -8,7 +8,7 @@ class Params extends Component {
   state = {};
   componentDidMount() {
 
-    this.setState({ projections: ["orthographic","azimuthalEqualArea","azimuthalEquidistant","conicEqualArea","conicEquidistant","equirectangular"]}) 
+    this.setState({ projections: ["orthographic","azimuthalEqualArea","azimuthalEquidistant","conicEqualArea","conicEquidistant","BerghausStar", "BakerDinomic", "Mollweide"]}) 
 
     this.setState({ mapSettings: this.props.mapSettings });
   }

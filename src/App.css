@@ -1,18 +1,17 @@
 @import "~antd/dist/antd.css";
 
 .site {
-  fill: cyan;
-  fill-opacity: 0.3;
-  stroke: cyan;
-  stroke-width: 3px;
+  fill: none;
+  stroke: chartreuse;
+  stroke-width: 2px;
 }
 
 .water {
-  fill: #9DD9D2;
+  fill: gray;
 }
 
 #building, .tile .building {
-  fill: gray;
+  fill: black;
 }
 
 #places,
@@ -32,12 +31,12 @@
 
 #boundaries {
   fill: none;
-  stroke: #93cbc4;
+  stroke: gray;
   stroke-width: 0.5px;
 }
 
 #roads {
-  stroke: white;
+  stroke: #ccc;
   stroke-width: 1px;
   fill: none;
 }
@@ -70,31 +69,31 @@
 .tile .stream,
 .tile .canal {
   fill: none;
-  stroke: #9DD9D2;
+  stroke: gray;
   stroke-width: 1.5px;
 }
 
 #water, #ocean, .tile .water,
 .tile .ocean {
-  fill: #9DD9D2;
-  stroke: #9DD9D2;
+  fill: gray;
+  stroke: gray;
 
 }
 
 #riverbank, .tile .riverbank {
-  fill: #9DD9D2;
+  fill: gray;
 }
 
 #waterboundary, #oceanboundary, #riverbankboundary,.tile .waterboundary,
 .tile .oceanboundary,
 .tile .riverbankboundary {
   fill: none;
-  stroke: #93cbc4;
+  stroke: gray;
   stroke-width: 0.5px;
 }
 
 #majorroad, .tile .majorroad {
-  stroke: #fb7b7a;
+  stroke: rgb(57, 57, 57);
   stroke-width: 1px;
 }
 
@@ -104,7 +103,7 @@
 }
 
 #highway, .tile .highway {
-  stroke: #FA4A48;
+  stroke: black;
   stroke-width: 1.5px;
 }
 

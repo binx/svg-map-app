@@ -2,8 +2,10 @@ import React, { Component } from 'react';
 import center from "@turf/center"
 import { Button } from "antd";
 import * as d3 from "d3";
+import * as d3proj from "d3-geo-projection";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
-import { thresholdFreedmanDiaconis } from 'd3';
+import textures from "textures"; 
+
 class Map extends Component { 
   state = {};
   componentDidMount() {
@@ -36,7 +38,12 @@ class Map extends Component {
 
     "conicEquidistant": d3.geoConicEquidistant().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
 
-    "equirectangular": d3.geoEquirectangular().translate([0, 0]).center(mapCentroid.geometry.coordinates).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData)
+    "BakerDinomic": d3proj.geoBaker().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
+
+    "BerghausStar": d3proj.geoBerghaus().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
+
+    "Mollweide": d3proj.geoMollweide().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData)
+    // "equirectangular": d3.geoEquirectangular().translate([0, 0]).center(mapCentroid.geometry.coordinates).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData)
 
     }
     const projection = projections[proj]
@@ -47,14 +54,15 @@ class Map extends Component {
     // projection.scale(Math.pow(2, 8+z) / (2 * Math.PI))
     // console.log(projection.scale())
     
+    // background patttern fill set
+    const t = textures.lines()
+    .orientation("3/8")
+    
     const sphericalProj = ["orthographic","azimuthalEqualArea","azimuthalEquidistant"]
 
-    if (sphericalProj.includes(proj)){
 
-      this.setState({ sphere: path( ({type: "Sphere"})) })
-    } else {
-      
-    }
+      svg.call(t)
+      svg.select(".sphere").style("fill", t.url());
 
     //generate quadtile array
     const getTiles = () => {
@@ -127,8 +135,14 @@ class Map extends Component {
       copySVG.width=width
       copySVG.height=height
       copySVG.className="tile"
-      const sphere = `<g id ="sphere" class="ocean"><path class="water" d="${path({type: "Sphere"})}"></path></g>` 
+  
+      d3.select(copySVG).call(t);
+      
+      const sphere = `<g id ="sphere"><path class = "sphere" d="${path({type: "Sphere"})}" fill = ${t.url()}></path></g>` 
+      
+      const defs = (svg.select('defs'))
 
+      d3.select(copySVG)
       copySVG.insertAdjacentHTML('beforeend', sphere);
 
       tiles.forEach(t => {
@@ -190,6 +204,7 @@ class Map extends Component {
 
     const tileMaker = () => {
       return tilePromise(getTiles()).then(t => {
+        this.setState({ sphere: path( ({type: "Sphere"})) })
         console.log(sortTileData(t))
         sortTileData(t)
         // drawTiles(sortTileData(t))
@@ -222,7 +237,7 @@ class Map extends Component {
           reDraw()
           
         })
-        .on('end', reDraw)
+        .on('end', tileMaker)
       )
 
 
@@ -289,8 +304,8 @@ class Map extends Component {
           ref="svg"
           style={{ margin: "20px", border: "1px solid #ccc" }}
         >
-          <g id = "sphere" class="ocean">
-            <path id = "sphere" d = { sphere }  class= "water"/> 
+          <g id = "sphere">
+            <path class = "sphere" d = { sphere }  /> 
           </g>
           <g id="tiles" class="tile">
            {maptiles.map((g,i) => (

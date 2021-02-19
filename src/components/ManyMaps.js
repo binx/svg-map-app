@@ -2,7 +2,10 @@ import React, { Component } from 'react';
 import center from "@turf/center"
 import { Button } from "antd";
 import * as d3 from "d3";
+import * as d3proj from "d3-geo-projection";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
+import textures from 'textures';
+
 class ManyMaps extends Component { 
   state = {};
   componentDidMount() {
@@ -37,8 +40,12 @@ class ManyMaps extends Component {
 
     "conicEquidistant": d3.geoConicEquidistant().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
 
-    "equirectangular": d3.geoEquirectangular().translate([0, 0]).center(mapCentroid.geometry.coordinates).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData)
+    "BakerDinomic": d3proj.geoBaker().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
+    
+    "BerghausStar": d3proj.geoBerghaus().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
 
+    "Mollweide": d3proj.geoMollweide().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData)
+    
     }
     const projection = projections[proj]
 
@@ -128,8 +135,15 @@ class ManyMaps extends Component {
       copySVG.width=width
       copySVG.height=height
       copySVG.className="tile"
-      const sphere = `<g id ="sphere" class="ocean"><path class="water" d="${path({type: "Sphere"})}"></path></g>` 
+      var t = textures.lines()
+      .thicker();
+      d3.select(copySVG).call(t);
+      
+      const sphere = `<g id ="sphere"><path class = "sphere" d="${path({type: "Sphere"})}" fill = ${t.url()}></path></g>` 
+      
+      const defs = (svg.select('defs'))
 
+      d3.select(copySVG)
       copySVG.insertAdjacentHTML('beforeend', sphere);
 
       tiles.forEach(t => {
@@ -200,6 +214,9 @@ class ManyMaps extends Component {
     tileMaker()
     this.setState({ outline: path(mapData) })
 
+    const reDraw = () => {
+      this.setState({ maptiles: rawdata.flat().map(r =>({ class: r.class, d: path(r.data)}))})
+    }
     
     let rotate0, coords0;
     const coords = () => projection.rotate(rotate0).invert([d3.event.x, d3.event.y]);
@@ -216,6 +233,7 @@ class ManyMaps extends Component {
             rotate0[1] + coords1[1] - coords0[1],
           ])
           this.setState({ outline: path(mapData) })
+          reDraw()
           
         })
         .on('end', tileMaker)
