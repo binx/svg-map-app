@@ -22,7 +22,7 @@
     "path": "^0.12.7",
     "patternfills": "^0.4.1",
     "react": "^16.8.6",
-    "react-color": "^2.17.3",
+    "react-color": "^2.19.3",
     "react-dom": "^16.8.6",
     "react-scripts": "2.1.8",
     "textures": "^1.2.2",

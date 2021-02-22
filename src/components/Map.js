@@ -1,10 +1,9 @@
 import React, { Component } from 'react';
-import center from "@turf/center"
 import { Button } from "antd";
 import * as d3 from "d3";
-import * as d3proj from "d3-geo-projection";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
 import textures from "textures"; 
+import {sortTileData, zenArray, tilePromise, getTiles, getClass, projections } from "./utils"
 
 class Map extends Component { 
   state = {};
@@ -21,107 +20,27 @@ class Map extends Component {
   createMapDisplay = () => {
     const mapData = this.props.data;
     const { width, height, proj} = this.props.mapSettings;
-
-    const mapCentroid = center(mapData);
-
     const svg = d3.select(this.refs.svg)
-
-    const projections = {
-
-    "orthographic" : d3.geoOrthographic().center(mapCentroid.geometry.coordinates).translate([width/4,height/4]) .rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width,height]]).fitExtent([[width * .05, height * .05],[width-(width * .05), height-(height * .05)]],mapData),
-
-    "azimuthalEqualArea":  d3.geoAzimuthalEqualArea().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
-
-    "azimuthalEquidistant": d3.geoAzimuthalEquidistant().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
-
-    "conicEqualArea": d3.geoConicEqualArea().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
-
-    "conicEquidistant": d3.geoConicEquidistant().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
-
-    "BakerDinomic": d3proj.geoBaker().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
-
-    "BerghausStar": d3proj.geoBerghaus().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData),
-
-    "Mollweide": d3proj.geoMollweide().center(mapCentroid.geometry.coordinates).translate([width / 4, height / 4]).rotate([-mapCentroid.geometry.coordinates[0], -mapCentroid.geometry.coordinates[1]]).clipExtent([[0, 0],[width, height]]).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData)
-    // "equirectangular": d3.geoEquirectangular().translate([0, 0]).center(mapCentroid.geometry.coordinates).fitExtent([[width * .05, height * .05],[width - (width * .05), height - (height * .05)]],mapData)
-
-    }
-    const projection = projections[proj]
+    const projection = projections(proj, mapData, width, height)
 
     const path = d3.geoPath(projection) 
 
     const z = (0 | Math.log(projection.scale()) / Math.LN2) - 5
-    // projection.scale(Math.pow(2, 8+z) / (2 * Math.PI))
-    // console.log(projection.scale())
-    
-    // background patttern fill set
-    const t = textures.lines()
-    .orientation("3/8")
-    
-    const sphericalProj = ["orthographic","azimuthalEqualArea","azimuthalEquidistant"]
 
-
-      svg.call(t)
-      svg.select(".sphere").style("fill", t.url());
-
-    //generate quadtile array
-    const getTiles = () => {
-      const tiles = [];
-      const z = (0 | Math.log(projection.scale()) / Math.LN2) - 5
-      // this is suboptimal
-      let upperbound;
-      let lowerbound;
-      if (z < 5) {
-        upperbound = [-180, 90]
-        lowerbound = [180, -180]
-      } else {
-        upperbound = projection.invert([0, 0])
-        lowerbound = projection.invert([width, height])
-      }
-      const merc = new SphericalMercator({
-        size: 256
-      })
-      const xyz = merc.xyz([upperbound[0], upperbound[1], lowerbound[0], lowerbound[1]], z)
-      const rows = d3.range(xyz.minX, xyz.maxX + 1)
-      const cols = d3.range(xyz.minY, xyz.maxY + 1)
-
-      cols.forEach(function(c) {
-        rows.forEach(function(r) {
-          tiles.push({
-            x: r,
-            y: c,
-            z: z
-          })
-        })
-      })
-
-      this.setState({ tiles: tiles.map(tile => `tile-${tile.x}-${tile.y}-${tile.z}`) })
-      return tiles;
-    }
-    //make request for quadtiles
-    const tilePromise = t => {
-      const mapTiles = Promise.all(t.map(async d => {
-        d.data = await d3.json(`https://tile.nextzen.org/tilezen/vector/v1/256/all/${d.z}/${d.x}/${d.y}.json?api_key=ztkh_UPOQRyakWKMjH_Bzg`);
-        return d;
-      }))
-      return mapTiles
-    }
     const rawdata = []
 
-    const sortTileData = ti => {
-      const tiles = ti.map(tile => {
-        const mapTile = zenArray(tile).map(d => ({
-          d: path(d), 
-          class: getClass(d),
-          data: d
-        }))
-        rawdata.push(mapTile)
-        return mapTile.flat(); 
+    const tileMaker = () => {
+      return tilePromise(getTiles(projection, width, height)).then(t => {
+        this.setState({ sphere: path( ({type: "Sphere"})) })
+        sortTileData(t,rawdata, path)
+        // drawTiles(sortTileData(t))
+        this.setState({ maptiles: sortTileData(t, rawdata, path)})
+        makeSVG(sortTileData(t,rawdata, path))
       })
-      this.setState({maptiles: tiles.flat()})
-      return tiles.flat();
-
     }
+
+    tileMaker()
+    this.setState({ outline: path(mapData) })
 
     // rendering our svg in the background every time we re-render
     // todo: deal with computedStyle
@@ -136,9 +55,9 @@ class Map extends Component {
       copySVG.height=height
       copySVG.className="tile"
   
-      d3.select(copySVG).call(t);
+      d3.select(copySVG).call(texture);
       
-      const sphere = `<g id ="sphere"><path class = "sphere" d="${path({type: "Sphere"})}" fill = ${t.url()}></path></g>` 
+      const sphere = `<g id ="sphere"><path class = "sphere" d="${path({type: "Sphere"})}" fill = ${texture.url()}></path></g>` 
       
       const defs = (svg.select('defs'))
 
@@ -155,29 +74,14 @@ class Map extends Component {
           layers[t.class].push(`<path class="${t.class}" d=${t.d}></path>`)
         }
       })
-      console.log(styles)
-      console.log(layers)
-      // tiles.forEach(tile => {
-      //   // copySVG.insertAdjacentHTML('afterbegin', `<g id=${tile.coords} class="tile"></g>`)
-      //  tile.data.map(t => {
-      //     if (path(t) === null) return null;
-      //     if (!styles.has(getClass(t))){
-      //       layers[getClass(t)] = []
-      //       layers[getClass(t)].push(`<path class="${getClass(t)}" d=${path(t)}></path>`)
-      //       styles.add(getClass(t))
-      //     } else {
-      //       layers[getClass(t)].push(`<path class="${getClass(t)}" d=${path(t)}></path>`)
-      //     }
-      //   })
-      // })
+
       Object.keys(layers).forEach(l =>{
         copySVG.insertAdjacentHTML('afterbegin', `<g id=${l} class="tile">${layers[l].join(' ')}</g>`)
       })
-      const sitelayer = `<g id ="site"><path class="site" d="${path(mapData)}"></path></g>` 
-
+      const sitelayer = `<g id ="site"><path class="site" d="${path(mapData)} } ></path></g>` 
+      
       copySVG.insertAdjacentHTML('beforeend', sitelayer);
   
-      styles.add('site')
       styles.add('tile')
 
       Array.from(styles).forEach(s => {
@@ -202,18 +106,12 @@ class Map extends Component {
     }
 
 
-    const tileMaker = () => {
-      return tilePromise(getTiles()).then(t => {
-        this.setState({ sphere: path( ({type: "Sphere"})) })
-        console.log(sortTileData(t))
-        sortTileData(t)
-        // drawTiles(sortTileData(t))
-        makeSVG(sortTileData(t))
-      })
-    }
+    // background patttern fill set
+    const texture = textures.lines()
+    .orientation("3/8")
 
-    tileMaker()
-    this.setState({ outline: path(mapData) })
+    svg.call(texture)
+    svg.select(".sphere").style("fill", texture.url());
 
     const reDraw = () => {
       this.setState({ maptiles: rawdata.flat().map(r =>({ class: r.class, d: path(r.data)}))})
@@ -239,47 +137,6 @@ class Map extends Component {
         })
         .on('end', tileMaker)
       )
-
-
-    const getClass = d => {
-      let kind = d.properties.kind || '';
-      if (d.properties.boundary)
-        kind += 'boundary';
-      return `${kind.replace('_','')}`;
-    }
-
-    const zenArray = t => {
-      let features = [];
-      const layers = [ 'earth', 'landuse', 'roads', 'buildings',];
-      layers.forEach(function(layer) {
-        if (t.data[layer]) {
-          for (let i in t.data[layer].features) {
-            // Don't include any label placement points
-            if (t.data[layer].features[i].properties.label_placement) { continue }
-
-             t.data[layer].features[i].group=layer
-             t.data[layer].features[i].class=getClass(t.data[layer].features[i])
-
-            features.push(t.data[layer].features[i]);
-          }
-        }
-      });
-      return features.sort((a, b) => (
-        a.properties.sort_rank ?
-        a.properties.sort_rank - b.properties.sort_rank :
-        0
-      ));
-    }
-
-  //   <defs>
-  //   <path id="outline" d="${path(outline)}" />
-  //   <clipPath id="clip"><use xlink:href="${new URL("#outline", location)}"/></clipPath>
-  // </defs>
-  // <g clip-path="url(${new URL("#clip", location)})">
-  //   <use xlink:href="${new URL("#outline", location)}" fill="red" />
-  //   <path d="${path(graticule)}" stroke="#ccc" fill="none"></path>
-  //   <path d="${path(land)}"></path>
-  // </g>
   }
 
   render() {
@@ -305,9 +162,9 @@ class Map extends Component {
           style={{ margin: "20px", border: "1px solid #ccc" }}
         >
           <g id = "sphere">
-            <path class = "sphere" d = { sphere }  /> 
+            <path className = "sphere" d = { sphere }  /> 
           </g>
-          <g id="tiles" class="tile">
+          <g id="tiles" className="tile">
            {maptiles.map((g,i) => (
               <path key={`path${i}`} className={g.class} d={g.d} />))}
           </g>

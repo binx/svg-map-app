@@ -5,6 +5,7 @@ import UploadForm from "./components/UploadForm";
 import ManyMaps from "./components/ManyMaps";
 import Map from "./components/Map"
 import Params from "./components/Params"
+import Palette from "./components/Palette"; 
 class App extends Component {
   state = {
     mapSettings: {
@@ -37,6 +38,7 @@ class App extends Component {
             mapSettings={mapSettings}
             updateSettings={this.updateSettings}
           />
+          {/* <Palette />  */}
         </div>
        {content.type &&
        <div>
