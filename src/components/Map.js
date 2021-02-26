@@ -1,9 +1,8 @@
 import React, { Component } from 'react';
 import { Button } from "antd";
 import * as d3 from "d3";
-import * as SphericalMercator from "@mapbox/sphericalmercator";
 import textures from "textures"; 
-import {sortTileData, zenArray, tilePromise, getTiles, getClass, projections } from "./utils"
+import {sortTileData, tilePromise, getTiles, projections } from "./utils"
 
 class Map extends Component { 
   state = {};
@@ -33,6 +32,7 @@ class Map extends Component {
       return tilePromise(getTiles(projection, width, height)).then(t => {
         this.setState({ sphere: path( ({type: "Sphere"})) })
         sortTileData(t,rawdata, path)
+        console.log(sortTileData(t,rawdata, path))
         // drawTiles(sortTileData(t))
         this.setState({ maptiles: sortTileData(t, rawdata, path)})
         makeSVG(sortTileData(t,rawdata, path))
@@ -166,7 +166,7 @@ class Map extends Component {
           </g>
           <g id="tiles" className="tile">
            {maptiles.map((g,i) => (
-              <path key={`path${i}`} className={g.class} d={g.d} />))}
+              <path key={`path${i}`} className={g.class} d={g.d} class={g.class} />))}
           </g>
           <g id="site"> 
           <path className="site" d={outline} ref="outline" id="site"/>

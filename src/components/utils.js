@@ -1,10 +1,9 @@
-import React from 'react';
 import center from "@turf/center"
-import { Button } from "antd";
 import * as d3 from "d3";
 import * as d3proj from "d3-geo-projection";
 import * as SphericalMercator from "@mapbox/sphericalmercator";
-import textures from "textures"; 
+import { styleguide } from './style.js'
+
 
 export const projections = (proj, mapData, width, height) => {
 const mapCentroid = center(mapData);
@@ -78,11 +77,29 @@ export const getClass = d => {
     kind += 'boundary';
   return `${kind.replace('_','')}`;
 }
+
+export const style = (t) => {
+    const sg = styleguide().map(s => Object.entries(s))
+    //todo: boundary style stuff
+    let st; 
+    if (t.properties.kind){
+      if (t.properties.boundary){
+       st = sg.filter(s => s[0][0] == `${t.properties.kind}boundary`)
+      }else{
+       st = sg.filter(s => s[0][0] == t.properties.kind) 
+      }    
+      if (st.length > 0){
+        return st[0][0][1]
+      }
+    }
+}
+
 export const sortTileData = (ti, rawdata, path) => {
   const tiles = ti.map(tile => {
     const mapTile = zenArray(tile).map(d => ({
       d: path(d), 
       class: getClass(d),
+      style : style(d),
       data: d
     }))
     rawdata.push(mapTile)

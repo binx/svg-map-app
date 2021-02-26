@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { SketchPicker } from 'react-color';
 import textures from 'textures';
 import * as d3 from 'd3';
 
